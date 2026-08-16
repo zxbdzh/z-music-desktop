@@ -1,7 +1,11 @@
+import { builtinModules } from 'node:module'
+
+const nodeBuiltinModules = new Set(builtinModules.map(moduleName => moduleName.replace(/^node:/, '')))
+
 export const forbiddenPatterns = Object.freeze([
   {
-    name: 'Electron runtime',
-    pattern: /(?:\belectron-updater\b|\bprocess\.versions\.electron\b|\bElectron\/\d|\brequire\s*\(\s*['"]electron['"]\s*\))/i
+    name: 'Electron package or runtime',
+    pattern: /(?:['"]electron['"]|\belectron-[a-z][\w-]*\b|@electron\/[a-z][\w-]*|\bprocess\.versions\.electron\b|\bElectron\/\d|\brequire\s*\(\s*['"]electron['"]\s*\))/i
   },
   {
     name: 'Node import or runtime',
@@ -9,7 +13,7 @@ export const forbiddenPatterns = Object.freeze([
   },
   {
     name: 'development-server URL',
-    pattern: /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?::\d+)?(?:[/?#]|['"`]|$)/i
+    pattern: /https?:\/\/(?:localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[::1\]|\[(?:f[cd][0-9a-f]{2}|fe[89ab][0-9a-f])(?::[0-9a-f]{0,4})+\]|10\.0\.2\.2|10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2}|169\.254(?:\.\d{1,3}){2}|[a-z0-9-]+\.local|host\.docker\.internal)(?::\d+)?(?:[/?#]|['"`]|$)/i
   },
   {
     name: 'author-owned API default',
@@ -17,15 +21,22 @@ export const forbiddenPatterns = Object.freeze([
   },
   {
     name: 'literal credential',
-    pattern: /(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|passwd)['"]?\s*[:=]\s*['"][^'"]{4,}['"]/i
+    pattern: /(?:api[_-]?key|access[_-]?token|client[_-]?secret|token|secret|password|passwd|cookie|session)['"]?\s*[:=]\s*['"][^'"]{4,}['"]/i
   },
   {
     name: 'literal bearer or private key',
-    pattern: /(?:authorization['"]?\s*[:=]\s*['"]bearer\s+[^'"]+|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----)/i
+    pattern: /(?:authorization['"]?\s*[:=]\s*['"]bearer\s+[^'"]+|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/i
   }
 ])
 
-export const forbiddenModuleSpecifier = /^(?:electron(?:-updater)?|node:[a-z][\w/-]*|assert|buffer|child_process|cluster|crypto|dgram|dns|events|fs|http|https|module|net|os|path|perf_hooks|process|querystring|readline|stream|string_decoder|timers|tls|tty|url|util|v8|vm|worker_threads|zlib)(?:\/|$)/i
+export function isForbiddenModuleSpecifier(specifier) {
+  if (/^(?:electron(?:$|-)|@electron\/)/i.test(specifier)) return true
+  const normalized = specifier.replace(/^node:/, '')
+  for (const builtin of nodeBuiltinModules) {
+    if (normalized === builtin || normalized.startsWith(`${builtin}/`)) return true
+  }
+  return false
+}
 
 export function collectModuleSpecifiers(source) {
   const patterns = [

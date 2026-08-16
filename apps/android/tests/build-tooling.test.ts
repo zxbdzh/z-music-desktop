@@ -1,58 +1,35 @@
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { parse } from 'yaml'
 
 import rootPackageSource from '../../../package.json?raw'
 import workflowSource from '../../../.github/workflows/quality-gate.yml?raw'
 import androidPackageSource from '../package.json?raw'
 import gradleRunnerSource from '../scripts/run-gradle.mjs?raw'
+import apkScannerSource from '../scripts/scan-apk.mjs?raw'
 
 interface WorkflowStep {
-  name: string
+  name?: string
   run?: string
   uses?: string
-  with: Record<string, string>
+  with?: Record<string, unknown>
+}
+
+interface Workflow {
+  jobs?: {
+    android?: {
+      steps?: WorkflowStep[]
+    }
+  }
 }
 
 const rootPackage = JSON.parse(rootPackageSource) as { scripts: Record<string, string> }
 const androidPackage = JSON.parse(androidPackageSource) as { scripts: Record<string, string>, dependencies: Record<string, string>, devDependencies: Record<string, string> }
 
-function parseAndroidSteps(source: string): WorkflowStep[] {
-  const lines = source.split(/\r?\n/)
-  const start = lines.findIndex(line => line === '  android:')
-  if (start < 0) throw new Error('Missing Android workflow job')
-  const jobLines = lines.slice(start + 1)
-  const nextJob = jobLines.findIndex(line => /^  [a-zA-Z0-9_-]+:$/.test(line))
-  const steps: WorkflowStep[] = []
-  let current: WorkflowStep | undefined
-  let readingWith = false
-
-  for (const line of nextJob < 0 ? jobLines : jobLines.slice(0, nextJob)) {
-    const name = line.match(/^      - name: (.+)$/)?.[1]
-    if (name) {
-      current = { name, with: {} }
-      steps.push(current)
-      readingWith = false
-      continue
-    }
-    if (!current) continue
-    const property = line.match(/^        (run|uses): (.+)$/)
-    if (property) {
-      current[property[1] as 'run' | 'uses'] = property[2]
-      readingWith = false
-      continue
-    }
-    if (line === '        with:') {
-      readingWith = true
-      continue
-    }
-    const withProperty = readingWith ? line.match(/^          ([a-zA-Z0-9_-]+): (.+)$/) : undefined
-    if (withProperty) current.with[withProperty[1]] = withProperty[2]
-  }
-  return steps
-}
-
-const androidSteps = parseAndroidSteps(workflowSource)
+const workflow = parse(workflowSource) as Workflow
+const androidSteps = workflow.jobs?.android?.steps
+if (!androidSteps) throw new Error('Missing Android workflow steps')
 const stepNamed = (name: string) => {
   const step = androidSteps.find(candidate => candidate.name === name)
   if (!step) throw new Error(`Missing Android workflow step: ${name}`)
@@ -72,6 +49,12 @@ describe('Android root build commands', () => {
       'android:gradle:debug': 'pnpm --dir apps/android android:gradle:debug',
       'android:scan:apk': 'pnpm --dir apps/android scan:apk'
     })
+    expect(androidPackage.scripts).toMatchObject({
+      test: 'pnpm test:unit && pnpm test:scanners',
+      'test:unit': 'vitest run',
+      'test:scanners': 'node --test scripts/*.node-test.mjs'
+    })
+    expect(rootPackage.scripts['android:test']).toBe('pnpm --dir apps/android test')
   })
 
   it('allows only the supported Gradle tasks and keeps the platform wrappers', () => {
@@ -85,6 +68,12 @@ describe('Android root build commands', () => {
 =======
     expect(androidPackage.scripts['android:gradle:unit']).toBe('node scripts/run-gradle.mjs :app:testDebugUnitTest')
     expect(androidPackage.scripts['android:gradle:debug']).toBe('node scripts/run-gradle.mjs :app:assembleDebug')
+  })
+
+  it('uses the approved archive reader instead of parsing ZIP headers', () => {
+    expect(androidPackage.dependencies.yauzl).toBe('2.10.0')
+    expect(apkScannerSource).toContain("from 'yauzl'")
+    expect(apkScannerSource).not.toMatch(/readUInt(?:16|32)LE|endOfCentralDirectory|centralDirectorySignature|localFileSignature/)
   })
 
   it('tracks the Linux Gradle wrapper as executable', () => {
@@ -120,13 +109,15 @@ describe('Android CI contract', () => {
       name: 'z-music-desktop-android-debug',
       path: 'apps/android/android/app/build/outputs/apk/debug/app-debug.apk',
       'if-no-files-found': 'error',
-      'retention-days': '7'
+      'retention-days': 7
     })
   })
 
   it('keeps Capacitor fixed at 8.5.0', () => {
     expect(androidPackage.dependencies['@capacitor/android']).toBe('8.5.0')
     expect(androidPackage.dependencies['@capacitor/core']).toBe('8.5.0')
+    expect(androidPackage.dependencies.yauzl).toBe('2.10.0')
     expect(androidPackage.devDependencies['@capacitor/cli']).toBe('8.5.0')
+    expect(androidPackage.devDependencies.yaml).toBe('2.8.1')
   })
 })

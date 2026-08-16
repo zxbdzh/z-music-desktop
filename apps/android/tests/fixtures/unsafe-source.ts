@@ -1,9 +1,27 @@
 export const unsafeExamples = [
   "import electron from 'electron'",
+  "import logger from 'electron-log'",
+  "import remote from '@electron/remote'",
   "import fs from 'node:fs'",
   "import 'node:path'",
+  "import diagnostics from 'node:diagnostics_channel'",
+  "import promises from 'fs/promises'",
   "const childProcess = require('child_process')",
   'http://localhost:4174',
+  'http://10.0.2.2:4174',
+  'http://192.168.1.20:8080/api',
+  'http://172.20.0.4/internal',
+  'http://music-box.local:8080/api',
   'https://ikunshare.github.io/private-api',
-  "apiKey = 'fixture-only-secret'"
+  "apiKey = 'fixture-only-secret'",
+  "accessToken = 'fixture-only-access-token'",
+  "client_secret = 'fixture-only-client-secret'",
+  "token = 'fixture-only-token'",
+  "secret = 'fixture-only-generic-secret'",
+  "password = 'fixture-only-password'",
+  "passwd = 'fixture-only-passwd'",
+  "cookie = 'fixture-only-cookie'",
+  "session = 'fixture-only-session'",
+  "Authorization = 'Bearer fixture-only-bearer'",
+  '-----BEGIN OPENSSH PRIVATE KEY-----'
 ]

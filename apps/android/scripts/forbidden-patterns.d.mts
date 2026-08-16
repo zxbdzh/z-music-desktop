@@ -4,5 +4,5 @@ export interface ForbiddenPattern {
 }
 
 export const forbiddenPatterns: readonly ForbiddenPattern[]
-export const forbiddenModuleSpecifier: RegExp
+export function isForbiddenModuleSpecifier(specifier: string): boolean
 export function collectModuleSpecifiers(source: string): string[]

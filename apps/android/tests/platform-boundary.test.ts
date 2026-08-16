@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { collectModuleSpecifiers, forbiddenModuleSpecifier } from '../scripts/forbidden-patterns.mjs'
+import { collectModuleSpecifiers, isForbiddenModuleSpecifier } from '../scripts/forbidden-patterns.mjs'
 
 const sourceFiles = import.meta.glob('../src/**/*.{ts,vue}', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
 const sharedCoreFiles = import.meta.glob(
@@ -11,7 +11,7 @@ const sharedCoreFiles = import.meta.glob(
 describe('Android web shell boundaries', () => {
   it('does not import Electron or Node APIs', () => {
     for (const [file, source] of Object.entries(sourceFiles)) {
-      expect(collectModuleSpecifiers(source).filter(specifier => forbiddenModuleSpecifier.test(specifier)), file).toEqual([])
+      expect(collectModuleSpecifiers(source).filter(isForbiddenModuleSpecifier), file).toEqual([])
     }
   })
 

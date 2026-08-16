@@ -1,97 +1,174 @@
-import { readFileSync } from 'node:fs'
+import crc32 from 'buffer-crc32'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { inflateRawSync } from 'node:zlib'
+import yauzl from 'yauzl'
 
-import { collectModuleSpecifiers, forbiddenModuleSpecifier, forbiddenPatterns } from './forbidden-patterns.mjs'
+import { collectModuleSpecifiers, forbiddenPatterns, isForbiddenModuleSpecifier } from './forbidden-patterns.mjs'
 
 const androidRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const defaultApkPath = resolve(androidRoot, 'android/app/build/outputs/apk/debug/app-debug.apk')
-const endOfCentralDirectorySignature = 0x06054b50
-const centralDirectorySignature = 0x02014b50
-const localFileSignature = 0x04034b50
-const maximumEntrySize = 128 * 1024 * 1024
+export const maximumEntrySize = 128 * 1024 * 1024
+export const maximumTotalSize = 512 * 1024 * 1024
 
-function findEndOfCentralDirectory(archive) {
-  const minimumOffset = Math.max(0, archive.length - 65_557)
-  for (let offset = archive.length - 22; offset >= minimumOffset; offset -= 1) {
-    if (archive.readUInt32LE(offset) === endOfCentralDirectorySignature) return offset
-  }
-  throw new Error('APK is not a valid ZIP archive: end-of-central-directory record is missing.')
+function openZip(apkPath) {
+  return new Promise((resolveOpen, rejectOpen) => {
+    yauzl.open(apkPath, {
+      autoClose: true,
+      lazyEntries: true,
+      strictFileNames: true,
+      validateEntrySizes: true
+    }, (error, zipfile) => {
+      if (error) rejectOpen(error)
+      else resolveOpen(zipfile)
+    })
+  })
 }
 
-export function readApkEntries(apkPath) {
-  const archive = readFileSync(apkPath)
-  const directoryEnd = findEndOfCentralDirectory(archive)
-  const entryCount = archive.readUInt16LE(directoryEnd + 10)
-  let directoryOffset = archive.readUInt32LE(directoryEnd + 16)
-  const entries = []
-
-  for (let index = 0; index < entryCount; index += 1) {
-    if (archive.readUInt32LE(directoryOffset) !== centralDirectorySignature) {
-      throw new Error(`APK central directory entry ${index} is invalid.`)
-    }
-
-    const flags = archive.readUInt16LE(directoryOffset + 8)
-    const compressionMethod = archive.readUInt16LE(directoryOffset + 10)
-    const compressedSize = archive.readUInt32LE(directoryOffset + 20)
-    const uncompressedSize = archive.readUInt32LE(directoryOffset + 24)
-    const fileNameLength = archive.readUInt16LE(directoryOffset + 28)
-    const extraLength = archive.readUInt16LE(directoryOffset + 30)
-    const commentLength = archive.readUInt16LE(directoryOffset + 32)
-    const localOffset = archive.readUInt32LE(directoryOffset + 42)
-    const name = archive.subarray(directoryOffset + 46, directoryOffset + 46 + fileNameLength).toString('utf8')
-
-    if ((flags & 1) !== 0) throw new Error(`Encrypted APK entry cannot be inspected: ${name}`)
-    if (compressedSize === 0xffffffff || uncompressedSize === 0xffffffff) {
-      throw new Error(`ZIP64 APK entry is not supported: ${name}`)
-    }
-    if (uncompressedSize > maximumEntrySize) throw new Error(`APK entry is too large to inspect: ${name}`)
-    if (archive.readUInt32LE(localOffset) !== localFileSignature) throw new Error(`APK entry has an invalid local header: ${name}`)
-
-    const localNameLength = archive.readUInt16LE(localOffset + 26)
-    const localExtraLength = archive.readUInt16LE(localOffset + 28)
-    const contentOffset = localOffset + 30 + localNameLength + localExtraLength
-    const compressed = archive.subarray(contentOffset, contentOffset + compressedSize)
-    let content
-    if (compressionMethod === 0) content = compressed
-    else if (compressionMethod === 8) content = inflateRawSync(compressed)
-    else throw new Error(`Unsupported APK compression method ${compressionMethod} for ${name}`)
-
-    if (content.length !== uncompressedSize) throw new Error(`APK entry size mismatch: ${name}`)
-    entries.push({ name, content })
-    directoryOffset += 46 + fileNameLength + extraLength + commentLength
-  }
-
-  return entries
-}
-
-export function scanApk(apkPath = defaultApkPath) {
-  const findings = []
-  const entries = readApkEntries(apkPath)
-  for (const { name, content } of entries) {
-    const searchableViews = [
-      content.toString('latin1'),
-      content.toString('utf16le'),
-      content.subarray(1).toString('utf16le')
-    ]
-    const entryFindings = new Set()
-    for (const searchableContent of searchableViews) {
-      const forbiddenImports = collectModuleSpecifiers(searchableContent).filter(specifier => forbiddenModuleSpecifier.test(specifier))
-      if (forbiddenImports.length > 0) entryFindings.add('Electron or Node import')
-      for (const { name: patternName, pattern } of forbiddenPatterns) {
-        if (pattern.test(searchableContent)) entryFindings.add(patternName)
+function readEntry(zipfile, entry, entrySizeLimit) {
+  return new Promise((resolveRead, rejectRead) => {
+    zipfile.openReadStream(entry, (openError, stream) => {
+      if (openError) {
+        rejectRead(openError)
+        return
       }
+
+      const chunks = []
+      let actualSize = 0
+      let checksum
+      let settled = false
+      const rejectOnce = (error) => {
+        if (settled) return
+        settled = true
+        rejectRead(error)
+      }
+
+      stream.on('data', chunk => {
+        actualSize += chunk.length
+        if (actualSize > entrySizeLimit) {
+          stream.destroy(new Error(`APK entry exceeds the ${entrySizeLimit}-byte read limit: ${entry.fileName}`))
+          return
+        }
+        checksum = crc32(chunk, checksum)
+        chunks.push(chunk)
+      })
+      stream.once('error', rejectOnce)
+      stream.once('end', () => {
+        if (settled) return
+        settled = true
+        if (actualSize !== entry.uncompressedSize) {
+          rejectRead(new Error(`APK entry size mismatch: ${entry.fileName}`))
+          return
+        }
+        const actualCrc = checksum ? checksum.readUInt32BE(0) : crc32.unsigned(Buffer.alloc(0))
+        if (actualCrc !== (entry.crc32 >>> 0)) {
+          rejectRead(new Error(`APK entry CRC mismatch: ${entry.fileName}`))
+          return
+        }
+        resolveRead(Buffer.concat(chunks, actualSize))
+      })
+    })
+  })
+}
+
+function scanContent(entryName, content) {
+  const searchableViews = [
+    content.toString('latin1'),
+    content.toString('utf16le'),
+    content.subarray(1).toString('utf16le')
+  ]
+  const entryFindings = new Set()
+  for (const searchableContent of searchableViews) {
+    const forbiddenImports = collectModuleSpecifiers(searchableContent).filter(isForbiddenModuleSpecifier)
+    if (forbiddenImports.length > 0) entryFindings.add('Electron or Node import')
+    for (const { name, pattern } of forbiddenPatterns) {
+      if (pattern.test(searchableContent)) entryFindings.add(name)
     }
-    for (const finding of entryFindings) findings.push(`${name}: ${finding}`)
   }
-  return { entriesScanned: entries.length, findings }
+  return Array.from(entryFindings, finding => `${entryName}: ${finding}`)
+}
+
+export async function scanApk(apkPath = defaultApkPath, limits = {}) {
+  const entrySizeLimit = limits.maximumEntrySize ?? maximumEntrySize
+  const totalSizeLimit = limits.maximumTotalSize ?? maximumTotalSize
+  const zipfile = await openZip(apkPath)
+  if (zipfile.entryCount === 0) {
+    zipfile.close()
+    throw new Error('APK archive contains no entries.')
+  }
+
+  return new Promise((resolveScan, rejectScan) => {
+    const findings = []
+    let entriesScanned = 0
+    let totalReportedSize = 0
+    let totalActualSize = 0
+    let hasManifest = false
+    let hasDex = false
+    let settled = false
+
+    const fail = (error) => {
+      if (settled) return
+      settled = true
+      zipfile.close()
+      rejectScan(error instanceof Error ? error : new Error(String(error)))
+    }
+
+    zipfile.once('error', fail)
+    zipfile.on('entry', entry => {
+      if (settled) return
+      entriesScanned += 1
+      totalReportedSize += entry.uncompressedSize
+
+      if (entry.isEncrypted()) {
+        fail(new Error(`Encrypted APK entry cannot be inspected: ${entry.fileName}`))
+        return
+      }
+      if (![0, 8].includes(entry.compressionMethod)) {
+        fail(new Error(`Unsupported APK compression method ${entry.compressionMethod}: ${entry.fileName}`))
+        return
+      }
+      if (entry.uncompressedSize > entrySizeLimit) {
+        fail(new Error(`APK entry exceeds the ${entrySizeLimit}-byte size limit: ${entry.fileName}`))
+        return
+      }
+      if (totalReportedSize > totalSizeLimit) {
+        fail(new Error(`APK entries exceed the ${totalSizeLimit}-byte total size limit.`))
+        return
+      }
+
+      if (entry.fileName === 'AndroidManifest.xml') hasManifest = true
+      if (/^classes(?:\d+)?\.dex$/.test(entry.fileName)) hasDex = true
+      if (entry.fileName.endsWith('/')) {
+        zipfile.readEntry()
+        return
+      }
+
+      readEntry(zipfile, entry, entrySizeLimit).then(content => {
+        totalActualSize += content.length
+        if (totalActualSize > totalSizeLimit) {
+          fail(new Error(`APK contents exceed the ${totalSizeLimit}-byte total read limit.`))
+          return
+        }
+        findings.push(...scanContent(entry.fileName, content))
+        zipfile.readEntry()
+      }, fail)
+    })
+    zipfile.once('end', () => {
+      if (settled) return
+      settled = true
+      if (!hasManifest || !hasDex) {
+        rejectScan(new Error('ZIP is not an Android APK: AndroidManifest.xml and classes*.dex are required.'))
+        return
+      }
+      resolveScan({ entriesScanned, findings })
+    })
+    zipfile.readEntry()
+  })
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const apkPath = resolve(process.argv[2] ?? defaultApkPath)
   try {
-    const { entriesScanned, findings } = scanApk(apkPath)
+    const { entriesScanned, findings } = await scanApk(apkPath)
     if (findings.length > 0) {
       console.error(`Android APK boundary scan failed:\n${findings.map(finding => `- ${finding}`).join('\n')}`)
       process.exitCode = 1

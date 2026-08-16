@@ -1,6 +1,7 @@
+import { builtinModules } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
-import { collectModuleSpecifiers, forbiddenModuleSpecifier, forbiddenPatterns } from '../scripts/forbidden-patterns.mjs'
+import { collectModuleSpecifiers, forbiddenPatterns, isForbiddenModuleSpecifier } from '../scripts/forbidden-patterns.mjs'
 
 const productionSources = {
   ...import.meta.glob('../src/**/*.{ts,tsx,js,jsx,vue}', { eager: true, query: '?raw', import: 'default' }),
@@ -20,11 +21,84 @@ describe('Android production source boundary', () => {
 
   it('rejects static, dynamic, side-effect, and CommonJS platform imports', () => {
     for (const [file, source] of Object.entries(productionSources)) {
-      expect(collectModuleSpecifiers(source).filter(specifier => forbiddenModuleSpecifier.test(specifier)), file).toEqual([])
+      expect(collectModuleSpecifiers(source).filter(isForbiddenModuleSpecifier), file).toEqual([])
     }
 
     const fixtureSpecifiers = collectModuleSpecifiers(Object.values(fixtureSources).join('\n'))
-    expect(fixtureSpecifiers).toEqual(expect.arrayContaining(['electron', 'node:fs', 'node:path', 'child_process']))
+    expect(fixtureSpecifiers).toEqual(expect.arrayContaining([
+      'electron',
+      'electron-log',
+      '@electron/remote',
+      'node:diagnostics_channel',
+      'node:fs',
+      'node:path',
+      'child_process',
+      'fs/promises'
+    ]))
+    expect(fixtureSpecifiers.filter(isForbiddenModuleSpecifier)).toHaveLength(fixtureSpecifiers.length)
+  })
+
+  it('rejects every Node builtin and Electron package family', () => {
+    for (const builtin of builtinModules) {
+      const normalized = builtin.replace(/^node:/, '')
+      expect(isForbiddenModuleSpecifier(normalized), normalized).toBe(true)
+      expect(isForbiddenModuleSpecifier(`node:${normalized}`), `node:${normalized}`).toBe(true)
+      expect(isForbiddenModuleSpecifier(`${normalized}/promises`), `${normalized}/promises`).toBe(true)
+    }
+    for (const specifier of ['electron', 'electron-log', 'electron-updater', '@electron/remote', '@electron/rebuild']) {
+      expect(isForbiddenModuleSpecifier(specifier), specifier).toBe(true)
+    }
+  })
+
+  it('rejects expanded development URLs and literal credentials without treating fixtures as production', () => {
+    const fixtureSource = Object.values(fixtureSources).join('\n')
+    const matchedLabels = forbiddenPatterns
+      .filter(({ pattern }) => pattern.test(fixtureSource))
+      .map(({ name }) => name)
+    expect(matchedLabels).toEqual(expect.arrayContaining([
+      'Electron package or runtime',
+      'Node import or runtime',
+      'development-server URL',
+      'author-owned API default',
+      'literal credential',
+      'literal bearer or private key'
+    ]))
+  })
+
+  it('covers every development host and credential category', () => {
+    const developmentPattern = forbiddenPatterns.find(({ name }) => name === 'development-server URL')?.pattern
+    const credentialPattern = forbiddenPatterns.find(({ name }) => name === 'literal credential')?.pattern
+    const sensitiveMaterialPattern = forbiddenPatterns.find(({ name }) => name === 'literal bearer or private key')?.pattern
+    expect(developmentPattern).toBeDefined()
+    expect(credentialPattern).toBeDefined()
+    expect(sensitiveMaterialPattern).toBeDefined()
+
+    for (const url of [
+      'http://localhost:4174',
+      'http://127.0.0.2:3000',
+      'http://0.0.0.0:8080',
+      'http://10.0.2.2:4174',
+      'http://10.20.30.40/api',
+      'http://172.16.0.2/api',
+      'http://192.168.1.20/api',
+      'http://music-box.local:8080/api',
+      'http://[fd00::1]:8080/api'
+    ]) expect(url).toMatch(developmentPattern!)
+
+    for (const assignment of [
+      "apiKey = 'literal-value'",
+      "access_token = 'literal-value'",
+      "clientSecret = 'literal-value'",
+      "token = 'literal-value'",
+      "secret = 'literal-value'",
+      "password = 'literal-value'",
+      "passwd = 'literal-value'",
+      "cookie = 'literal-value'",
+      "session = 'literal-value'"
+    ]) expect(assignment).toMatch(credentialPattern!)
+
+    expect("Authorization = 'Bearer literal-value'").toMatch(sensitiveMaterialPattern!)
+    expect('-----BEGIN OPENSSH PRIVATE KEY-----').toMatch(sensitiveMaterialPattern!)
   })
 
   it.each(sourceContentPatterns)('contains no $name', ({ pattern }) => {
