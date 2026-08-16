@@ -48,3 +48,66 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  android:
+    name: Android test and debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/android/pnpm-lock.yaml
+
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36"
+
+      - name: Install Android dependencies
+        run: pnpm android:install
+
+      - name: Test Android boundaries and build config
+        run: pnpm android:test
+
+      - name: Typecheck Android app
+        run: pnpm android:typecheck
+
+      - name: Build Android web assets
+        run: pnpm android:build:web
+
+      - name: Sync Capacitor Android project
+        run: pnpm android:cap:sync
+
+      - name: Run Android unit tests
+        run: pnpm android:gradle:unit
+
+      - name: Build Android debug APK
+        run: pnpm android:gradle:debug
+
+      - name: Upload Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: z-music-android-debug
+          path: apps/android/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

@@ -10,14 +10,17 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "pnpm typecheck && pnpm build:web",
+    "build:web": "vite build",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "cap:add": "cap add android",
-    "cap:sync": "pnpm build && cap sync android",
+    "cap:sync": "cap sync android",
     "cap:open": "cap open android",
-    "android:assembleDebug": "pnpm cap:sync && cd android && gradlew.bat :app:assembleDebug"
+    "android:gradle:unit": "node scripts/run-gradle.mjs :app:testDebugUnitTest",
+    "android:gradle:debug": "node scripts/run-gradle.mjs :app:assembleDebug",
+    "android:assembleDebug": "pnpm build && pnpm cap:sync && pnpm android:gradle:debug"
   },
   "dependencies": {
     "@capacitor/android": "8.5.0",

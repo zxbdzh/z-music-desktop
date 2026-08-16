@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 
 const gradleFiles = import.meta.glob('../android/**/*.{gradle,properties}', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
 const nativeFiles = import.meta.glob('../android/**/*.{java,kt}', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
 const xmlFiles = import.meta.glob('../android/**/*.xml', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
+const capacitorConfigSource = readFileSync(new URL('../capacitor.config.ts', import.meta.url), 'utf8')
 
 function sourceEndingWith(suffix: string): string {
   const entry = Object.entries(gradleFiles).find(([file]) => file.endsWith(`/android/${suffix}`))
@@ -20,6 +22,12 @@ describe('Android build baseline', () => {
     expect(variables).toContain('targetSdkVersion = 36')
     expect(variables).toContain("media3Version = '1.11.0'")
     expect(sourceEndingWith('app/build.gradle')).toContain('media3-exoplayer:$media3Version')
+  })
+
+  it('keeps the application id fixed across Capacitor and Gradle', () => {
+    expect(capacitorConfigSource).toContain("appId: 'io.github.zxbdzh.zmusic'")
+    expect(sourceEndingWith('app/build.gradle')).toContain('applicationId "io.github.zxbdzh.zmusic"')
+    expect(sourceEndingWith('app/build.gradle')).toContain('namespace = "io.github.zxbdzh.zmusic"')
   })
 
   it('keeps native source free of Electron and Node imports', () => {

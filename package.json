@@ -6,6 +6,13 @@
   "scripts": {
     "test": "vitest",
     "test:run": "vitest run",
+    "android:install": "pnpm --dir apps/android install --frozen-lockfile",
+    "android:test": "pnpm --dir apps/android test",
+    "android:typecheck": "pnpm --dir apps/android typecheck",
+    "android:build:web": "pnpm --dir apps/android build:web",
+    "android:cap:sync": "pnpm --dir apps/android cap:sync",
+    "android:gradle:unit": "pnpm --dir apps/android android:gradle:unit",
+    "android:gradle:debug": "pnpm --dir apps/android android:gradle:debug",
     "test:apifox": "node scripts/apifox/run-aurio-contract-regression.mjs",
     "test:apifox:unit": "node --test scripts/apifox/aurio-contract-verifier.test.mjs",
     "brand:generate": "node scripts/brand/generate-assets.mjs",

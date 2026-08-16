@@ -13,25 +13,31 @@
 
 ## 开发
 
-```powershell
-pnpm install
-pnpm dev
-pnpm typecheck
-pnpm test
-pnpm build
+从仓库根目录执行以下命令。Windows、Linux 和 macOS 使用相同的命令名：
+
+```shell
+pnpm android:install
+pnpm android:test
+pnpm android:typecheck
+pnpm android:build:web
+pnpm android:cap:sync
 ```
 
-首次生成 Android 工程（需要联网，不需要在生成阶段安装 SDK）：
+`android:install` 始终使用 `apps/android/pnpm-lock.yaml` 的 frozen lockfile。`android:cap:sync` 只同步已经生成的 Web 资源，因此修改 Web 代码后应先运行 `android:build:web`。
 
-```powershell
-pnpm cap:add
-pnpm cap:sync
+Gradle 单元测试和 debug APK 也从仓库根目录执行：
+
+```shell
+pnpm android:gradle:unit
+pnpm android:gradle:debug
 ```
 
-有 Android SDK 后构建 debug 包：
+脚本会在 Windows 调用 `gradlew.bat`，在 Linux 和 macOS 调用 `./gradlew`。debug APK 输出到 `apps/android/android/app/build/outputs/apk/debug/app-debug.apk`。
 
-```powershell
-pnpm android:assembleDebug
+本地 Web 预览仍可在子目录启动：
+
+```shell
+pnpm --dir apps/android dev
 ```
 
 ## 平台边界
