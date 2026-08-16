@@ -19,20 +19,20 @@
 pnpm android:install
 pnpm android:test
 pnpm android:typecheck
-pnpm android:build:web
-pnpm android:cap:sync
+pnpm android:sync
 ```
 
-`android:install` 始终使用 `apps/android/pnpm-lock.yaml` 的 frozen lockfile。`android:cap:sync` 只同步已经生成的 Web 资源，因此修改 Web 代码后应先运行 `android:build:web`。
+`android:install` 始终使用 `apps/android/pnpm-lock.yaml` 的 frozen lockfile。`android:sync` 会先构建 Web 资源，再同步 Capacitor Android 工程，避免同步过期的 `dist` 内容。单独调试某一步时仍可使用 `android:build:web` 和 `android:cap:sync`。
 
 Gradle 单元测试和 debug APK 也从仓库根目录执行：
 
 ```shell
 pnpm android:gradle:unit
 pnpm android:gradle:debug
+pnpm android:scan:apk
 ```
 
-脚本会在 Windows 调用 `gradlew.bat`，在 Linux 和 macOS 调用 `./gradlew`。debug APK 输出到 `apps/android/android/app/build/outputs/apk/debug/app-debug.apk`。
+Gradle 脚本只接受 `:app:testDebugUnitTest` 和 `:app:assembleDebug` 两个任务，在 Windows 调用 `gradlew.bat`，在 Linux 和 macOS 调用 `./gradlew`。debug APK 输出到 `apps/android/android/app/build/outputs/apk/debug/app-debug.apk`；`android:scan:apk` 会解压并扫描 APK 内的全部打包条目，发现 Electron/Node 运行时引用、开发服务器 URL、字面量凭据或作者自有 API 默认地址时失败，APK 缺失时也会失败。
 
 本地 Web 预览仍可在子目录启动：
 

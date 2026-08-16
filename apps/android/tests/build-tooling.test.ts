@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import rootPackageSource from '../../../package.json?raw'
@@ -5,8 +7,57 @@ import workflowSource from '../../../.github/workflows/quality-gate.yml?raw'
 import androidPackageSource from '../package.json?raw'
 import gradleRunnerSource from '../scripts/run-gradle.mjs?raw'
 
+interface WorkflowStep {
+  name: string
+  run?: string
+  uses?: string
+  with: Record<string, string>
+}
+
 const rootPackage = JSON.parse(rootPackageSource) as { scripts: Record<string, string> }
 const androidPackage = JSON.parse(androidPackageSource) as { scripts: Record<string, string>, dependencies: Record<string, string>, devDependencies: Record<string, string> }
+
+function parseAndroidSteps(source: string): WorkflowStep[] {
+  const lines = source.split(/\r?\n/)
+  const start = lines.findIndex(line => line === '  android:')
+  if (start < 0) throw new Error('Missing Android workflow job')
+  const jobLines = lines.slice(start + 1)
+  const nextJob = jobLines.findIndex(line => /^  [a-zA-Z0-9_-]+:$/.test(line))
+  const steps: WorkflowStep[] = []
+  let current: WorkflowStep | undefined
+  let readingWith = false
+
+  for (const line of nextJob < 0 ? jobLines : jobLines.slice(0, nextJob)) {
+    const name = line.match(/^      - name: (.+)$/)?.[1]
+    if (name) {
+      current = { name, with: {} }
+      steps.push(current)
+      readingWith = false
+      continue
+    }
+    if (!current) continue
+    const property = line.match(/^        (run|uses): (.+)$/)
+    if (property) {
+      current[property[1] as 'run' | 'uses'] = property[2]
+      readingWith = false
+      continue
+    }
+    if (line === '        with:') {
+      readingWith = true
+      continue
+    }
+    const withProperty = readingWith ? line.match(/^          ([a-zA-Z0-9_-]+): (.+)$/) : undefined
+    if (withProperty) current.with[withProperty[1]] = withProperty[2]
+  }
+  return steps
+}
+
+const androidSteps = parseAndroidSteps(workflowSource)
+const stepNamed = (name: string) => {
+  const step = androidSteps.find(candidate => candidate.name === name)
+  if (!step) throw new Error(`Missing Android workflow step: ${name}`)
+  return step
+}
 
 describe('Android root build commands', () => {
   it('exposes the clean-checkout workflow from the repository root', () => {
@@ -16,31 +67,61 @@ describe('Android root build commands', () => {
       'android:typecheck': 'pnpm --dir apps/android typecheck',
       'android:build:web': 'pnpm --dir apps/android build:web',
       'android:cap:sync': 'pnpm --dir apps/android cap:sync',
+      'android:sync': 'pnpm android:build:web && pnpm android:cap:sync',
       'android:gradle:unit': 'pnpm --dir apps/android android:gradle:unit',
-      'android:gradle:debug': 'pnpm --dir apps/android android:gradle:debug'
+      'android:gradle:debug': 'pnpm --dir apps/android android:gradle:debug',
+      'android:scan:apk': 'pnpm --dir apps/android scan:apk'
     })
   })
 
-  it('selects the platform Gradle wrapper without shell-specific root commands', () => {
+  it('allows only the supported Gradle tasks and keeps the platform wrappers', () => {
+    expect(gradleRunnerSource).toContain("':app:testDebugUnitTest'")
+    expect(gradleRunnerSource).toContain("':app:assembleDebug'")
     expect(gradleRunnerSource).toContain("isWindows ? 'gradlew.bat' : './gradlew'")
+<<<<<<< HEAD
     expect(androidPackage.scripts['android:gradle:unit']).toContain(':app:testDebugUnitTest')
     expect(androidPackage.scripts['android:gradle:debug']).toContain(':app:assembleDebug')
   })
+=======
+    expect(androidPackage.scripts['android:gradle:unit']).toBe('node scripts/run-gradle.mjs :app:testDebugUnitTest')
+    expect(androidPackage.scripts['android:gradle:debug']).toBe('node scripts/run-gradle.mjs :app:assembleDebug')
+  })
+
+  it('tracks the Linux Gradle wrapper as executable', () => {
+    const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url))
+    const indexEntry = execFileSync('git', ['ls-files', '--stage', 'apps/android/android/gradlew'], {
+      cwd: repositoryRoot,
+      encoding: 'utf8'
+    })
+    expect(indexEntry.trim().split(/\s+/)[0]).toBe('100755')
+    expect(stepNamed('Ensure the Linux Gradle wrapper is executable').run).toBe('chmod +x apps/android/android/gradlew')
+  })
+>>>>>>> 627cc63 (fix: 加固 Android 构建与 APK 质量门禁)
 })
 
 describe('Android CI contract', () => {
-  it('pins the requested runtime and performs the complete Android gate', () => {
-    expect(workflowSource).toContain('node-version: 22')
-    expect(workflowSource).toContain('java-version: 21')
-    expect(workflowSource).toContain('sdkmanager "platforms;android-36"')
-    expect(workflowSource).toContain('run: pnpm android:install')
-    expect(workflowSource).toContain('run: pnpm android:test')
-    expect(workflowSource).toContain('run: pnpm android:typecheck')
-    expect(workflowSource).toContain('run: pnpm android:build:web')
-    expect(workflowSource).toContain('run: pnpm android:cap:sync')
-    expect(workflowSource).toContain('run: pnpm android:gradle:unit')
-    expect(workflowSource).toContain('run: pnpm android:gradle:debug')
-    expect(workflowSource).toContain('apps/android/android/app/build/outputs/apk/debug/app-debug.apk')
+  it('runs build, packaged APK scan, and upload in semantic order', () => {
+    expect(stepNamed('Build and sync Android web assets').run).toBe('pnpm android:sync')
+    expect(stepNamed('Run Android unit tests').run).toBe('pnpm android:gradle:unit')
+    expect(stepNamed('Build Android debug APK').run).toBe('pnpm android:gradle:debug')
+    expect(stepNamed('Scan packaged Android debug APK').run).toBe('pnpm android:scan:apk')
+
+    const buildIndex = androidSteps.findIndex(step => step.name === 'Build Android debug APK')
+    const scanIndex = androidSteps.findIndex(step => step.name === 'Scan packaged Android debug APK')
+    const uploadIndex = androidSteps.findIndex(step => step.name === 'Upload Android debug APK')
+    expect(buildIndex).toBeLessThan(scanIndex)
+    expect(scanIndex).toBeLessThan(uploadIndex)
+  })
+
+  it('uploads the stable full-brand debug artifact with strict settings', () => {
+    const upload = stepNamed('Upload Android debug APK')
+    expect(upload.uses).toBe('actions/upload-artifact@v4')
+    expect(upload.with).toEqual({
+      name: 'z-music-desktop-android-debug',
+      path: 'apps/android/android/app/build/outputs/apk/debug/app-debug.apk',
+      'if-no-files-found': 'error',
+      'retention-days': '7'
+    })
   })
 
   it('keeps Capacitor fixed at 8.5.0', () => {

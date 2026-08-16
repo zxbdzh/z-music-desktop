@@ -92,11 +92,8 @@ jobs:
       - name: Typecheck Android app
         run: pnpm android:typecheck
 
-      - name: Build Android web assets
-        run: pnpm android:build:web
-
-      - name: Sync Capacitor Android project
-        run: pnpm android:cap:sync
+      - name: Build and sync Android web assets
+        run: pnpm android:sync
 
       - name: Run Android unit tests
         run: pnpm android:gradle:unit
@@ -104,10 +101,13 @@ jobs:
       - name: Build Android debug APK
         run: pnpm android:gradle:debug
 
+      - name: Scan packaged Android debug APK
+        run: pnpm android:scan:apk
+
       - name: Upload Android debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: z-music-android-debug
+          name: z-music-desktop-android-debug
           path: apps/android/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7

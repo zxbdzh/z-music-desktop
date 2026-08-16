@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { collectModuleSpecifiers, forbiddenModuleSpecifier, forbiddenPatterns } from '../scripts/forbidden-patterns.mjs'
+
 const productionSources = {
   ...import.meta.glob('../src/**/*.{ts,tsx,js,jsx,vue}', { eager: true, query: '?raw', import: 'default' }),
   ...import.meta.glob('../android/app/src/main/**/*.{java,kt}', { eager: true, query: '?raw', import: 'default' })
@@ -7,13 +9,7 @@ const productionSources = {
 
 const fixtureSources = import.meta.glob('./fixtures/**/*', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
 
-const forbiddenPatterns: Array<[string, RegExp]> = [
-  ['Electron or Node import', /(?:from\s*|import\s*\()(['"])(?:electron|node:|fs(?:\/|['"]|$)|path(?:\/|['"]|$)|child_process(?:\/|['"]|$))/i],
-  ['development URL', /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?::\d+)?(?:\/|['"`]|$)/i],
-  ['author-owned API default', /https?:\/\/(?:[^/'"`]+\.)?(?:ikunshare\.github\.io|lxmusic\.toside\.cn|music\.zxbdwy\.online)(?:\/|['"`]|$)/i],
-  ['literal credential', /(?:api[_-]?key|access[_-]?token|client[_-]?secret|password|passwd)\s*[:=]\s*['"][^'"]{4,}['"]/i],
-  ['literal bearer credential', /(?:authorization\s*[:=]\s*['"]bearer\s+|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----)/i]
-]
+const sourceContentPatterns = forbiddenPatterns.filter(({ name }) => !['Electron runtime', 'Node import or runtime'].includes(name))
 
 describe('Android production source boundary', () => {
   it('scans production web and native sources only', () => {
@@ -22,7 +18,16 @@ describe('Android production source boundary', () => {
     expect(Object.keys(productionSources).some(file => file.includes('/tests/'))).toBe(false)
   })
 
-  it.each(forbiddenPatterns)('contains no %s', (_label, pattern) => {
+  it('rejects static, dynamic, side-effect, and CommonJS platform imports', () => {
+    for (const [file, source] of Object.entries(productionSources)) {
+      expect(collectModuleSpecifiers(source).filter(specifier => forbiddenModuleSpecifier.test(specifier)), file).toEqual([])
+    }
+
+    const fixtureSpecifiers = collectModuleSpecifiers(Object.values(fixtureSources).join('\n'))
+    expect(fixtureSpecifiers).toEqual(expect.arrayContaining(['electron', 'node:fs', 'node:path', 'child_process']))
+  })
+
+  it.each(sourceContentPatterns)('contains no $name', ({ pattern }) => {
     for (const [file, source] of Object.entries(productionSources)) {
       expect(source, file).not.toMatch(pattern)
     }
