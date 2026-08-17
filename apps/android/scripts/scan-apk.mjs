@@ -87,6 +87,14 @@ function scanContent(entryName, content) {
   return Array.from(entryFindings, finding => `${entryName}: ${finding}`)
 }
 
+function isAndroidBinaryXml(content) {
+  return content.length >= 4 && content.subarray(0, 4).equals(Buffer.from([0x03, 0x00, 0x08, 0x00]))
+}
+
+function isDexFile(content) {
+  return content.length >= 8 && /^dex\n\d{3}\0/.test(content.subarray(0, 8).toString('latin1'))
+}
+
 export async function scanApk(apkPath = defaultApkPath, limits = {}) {
   const entrySizeLimit = limits.maximumEntrySize ?? maximumEntrySize
   const totalSizeLimit = limits.maximumTotalSize ?? maximumTotalSize
@@ -135,9 +143,11 @@ export async function scanApk(apkPath = defaultApkPath, limits = {}) {
         return
       }
 
-      if (entry.fileName === 'AndroidManifest.xml') hasManifest = true
-      if (/^classes(?:\d+)?\.dex$/.test(entry.fileName)) hasDex = true
       if (entry.fileName.endsWith('/')) {
+        if (entry.compressedSize !== 0 || entry.uncompressedSize !== 0 || (entry.crc32 >>> 0) !== 0) {
+          fail(new Error(`APK directory entry contains hidden data: ${entry.fileName}`))
+          return
+        }
         zipfile.readEntry()
         return
       }
@@ -148,6 +158,8 @@ export async function scanApk(apkPath = defaultApkPath, limits = {}) {
           fail(new Error(`APK contents exceed the ${totalSizeLimit}-byte total read limit.`))
           return
         }
+        if (entry.fileName === 'AndroidManifest.xml' && isAndroidBinaryXml(content)) hasManifest = true
+        if (/^classes(?:\d+)?\.dex$/.test(entry.fileName) && isDexFile(content)) hasDex = true
         findings.push(...scanContent(entry.fileName, content))
         zipfile.readEntry()
       }, fail)

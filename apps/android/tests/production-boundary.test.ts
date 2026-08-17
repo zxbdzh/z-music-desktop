@@ -29,13 +29,21 @@ describe('Android production source boundary', () => {
       'electron',
       'electron-log',
       '@electron/remote',
+      'electron/main',
+      'electron/common',
+      'electron/renderer',
+      'electron/utility',
+      'electron',
       'node:diagnostics_channel',
       'node:fs',
       'node:path',
       'child_process',
-      'fs/promises'
+      'fs/promises',
+      'fs'
     ]))
     expect(fixtureSpecifiers.filter(isForbiddenModuleSpecifier)).toHaveLength(fixtureSpecifiers.length)
+    expect(collectModuleSpecifiers("import/*comment*/('electron')")).toEqual(['electron'])
+    expect(collectModuleSpecifiers("require/*comment*/('fs')")).toEqual(['fs'])
   })
 
   it('rejects every Node builtin and Electron package family', () => {
@@ -45,7 +53,17 @@ describe('Android production source boundary', () => {
       expect(isForbiddenModuleSpecifier(`node:${normalized}`), `node:${normalized}`).toBe(true)
       expect(isForbiddenModuleSpecifier(`${normalized}/promises`), `${normalized}/promises`).toBe(true)
     }
-    for (const specifier of ['electron', 'electron-log', 'electron-updater', '@electron/remote', '@electron/rebuild']) {
+    for (const specifier of [
+      'electron',
+      'electron-log',
+      'electron-updater',
+      'electron/main',
+      'electron/common',
+      'electron/renderer',
+      'electron/utility',
+      '@electron/remote',
+      '@electron/rebuild'
+    ]) {
       expect(isForbiddenModuleSpecifier(specifier), specifier).toBe(true)
     }
   })
@@ -82,6 +100,7 @@ describe('Android production source boundary', () => {
       'http://172.16.0.2/api',
       'http://192.168.1.20/api',
       'http://music-box.local:8080/api',
+      'https://music-app.test/api',
       'http://[fd00::1]:8080/api'
     ]) expect(url).toMatch(developmentPattern!)
 
@@ -97,8 +116,12 @@ describe('Android production source boundary', () => {
       "session = 'literal-value'"
     ]) expect(assignment).toMatch(credentialPattern!)
 
+    expect('password = `literal-value`').toMatch(credentialPattern!)
+
     expect("Authorization = 'Bearer literal-value'").toMatch(sensitiveMaterialPattern!)
+    expect('Authorization = `Basic bGl0ZXJhbDp2YWx1ZQ==`').toMatch(sensitiveMaterialPattern!)
     expect('-----BEGIN OPENSSH PRIVATE KEY-----').toMatch(sensitiveMaterialPattern!)
+    expect('https://api.example.com/v1').not.toMatch(developmentPattern!)
   })
 
   it.each(sourceContentPatterns)('contains no $name', ({ pattern }) => {
