@@ -8,7 +8,7 @@ export default ({ emit, list }) => {
   //   collect: true,
   // })
   const t = useI18n()
-  const menuLocation = reactive({ x: 0, y: 0 })
+  const menuLocation = reactive({ x: 0, y: 0, trigger: null })
   const isShowMenu = ref(false)
 
   const menus = computed(() => {
@@ -29,6 +29,7 @@ export default ({ emit, list }) => {
   const showMenu = (event, index) => {
     menuLocation.x = event.pageX
     menuLocation.y = event.pageY
+    menuLocation.trigger = event.currentTarget
 
     if (isShowMenu.value) return
     emit('show-menu')

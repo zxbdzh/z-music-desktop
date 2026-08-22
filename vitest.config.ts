@@ -10,6 +10,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@root': '/src',
       '@renderer': '/src/renderer',
       '@common': '/src/common',
       '@main': '/src/main',

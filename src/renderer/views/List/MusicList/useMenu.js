@@ -50,7 +50,7 @@ export default ({
     songMemory: true,
   })
   const t = useI18n()
-  const menuLocation = shallowReactive({ x: 0, y: 0 })
+  const menuLocation = shallowReactive({ x: 0, y: 0, trigger: null })
   const isShowItemMenu = ref(false)
   const currentMusicInfo = ref(null)
   const currentLikeStatus = ref(false)
@@ -218,6 +218,7 @@ export default ({
 
     menuLocation.x = event.pageX
     menuLocation.y = event.pageY
+    menuLocation.trigger = event.currentTarget
 
     if (isShowItemMenu.value) return
 
