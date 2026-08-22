@@ -41,7 +41,7 @@ export default ({
     songMemory: true,
   })
   const t = useI18n()
-  const menuLocation = reactive({ x: 0, y: 0 })
+  const menuLocation = reactive({ x: 0, y: 0, trigger: null })
   const isShowItemMenu = ref(false)
   const currentMusicInfo = ref(null)
   const menuList = ref([])
@@ -183,6 +183,7 @@ export default ({
 
     menuLocation.x = event.pageX
     menuLocation.y = event.pageY
+    menuLocation.trigger = event.currentTarget
 
     if (isShowItemMenu.value) return
     emit('show-menu')

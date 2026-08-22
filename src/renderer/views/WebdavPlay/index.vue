@@ -283,7 +283,7 @@ export default {
     const playlistSongsLoading = ref(false)
 
     const isShowItemMenu = ref(false)
-    const menuLocation = reactive({ x: 0, y: 0 })
+    const menuLocation = reactive({ x: 0, y: 0, trigger: null })
     const menuTarget = ref(null) // { type: 'playlist', playlist } | { type: 'song', song, folder }
     const isShowRename = ref(false)
     const renameText = ref('')
@@ -487,6 +487,7 @@ export default {
       menuTarget.value = { type: 'playlist', playlist }
       menuLocation.x = event.pageX
       menuLocation.y = event.pageY
+      menuLocation.trigger = event.currentTarget
       isShowItemMenu.value = true
     }
     const showSongMenu = (event, song) => {
@@ -495,6 +496,7 @@ export default {
       menuTarget.value = { type: 'song', song, folder }
       menuLocation.x = event.pageX
       menuLocation.y = event.pageY
+      menuLocation.trigger = event.currentTarget
       isShowItemMenu.value = true
     }
 

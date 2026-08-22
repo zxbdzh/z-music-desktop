@@ -46,6 +46,7 @@ import {
   getFirstEnabledIndex,
   getNextEnabledIndex,
   getPopupDismissal,
+  isActivationKey,
   isComposingKeyEvent,
   restoreFocusIfOwned,
 } from './a11y'
@@ -102,7 +103,12 @@ export default {
       const target = restoreTarget.value
       restoreTarget.value = null
       if (!target?.isConnected) return
-      void nextTick(() => restoreFocusIfOwned(dom_menu.value, target))
+      void nextTick(() => {
+        const addTemporaryTabIndex = target.tabIndex < 0 && !target.hasAttribute('tabindex')
+        if (addTemporaryTabIndex) target.setAttribute('tabindex', '-1')
+        restoreFocusIfOwned(dom_menu.value, target)
+        if (addTemporaryTabIndex) target.removeAttribute('tabindex')
+      })
     }
     const closeMenu = ({ restore = false, notify = true } = {}) => {
       shouldRestoreFocus = restore
@@ -136,6 +142,14 @@ export default {
 
       const buttons = getButtons()
       const targetIndex = buttons.indexOf(event.target)
+      if (isActivationKey(event.key)) {
+        const item = props.menus[targetIndex]
+        if (!item || isIndexUnavailable(targetIndex)) return
+        event.preventDefault()
+        activateItem(item)
+        return
+      }
+
       const currentIndex = targetIndex > -1 ? targetIndex : focusedIndex.value
       const nextIndex = getNextEnabledIndex(
         props.menus.length,
@@ -149,11 +163,23 @@ export default {
     }
 
     watch(
+      () => props.xy.trigger,
+      (target) => {
+        if (props.modelValue && target instanceof HTMLElement) restoreTarget.value = target
+      }
+    )
+
+    watch(
       () => props.modelValue,
       (isOpen) => {
         if (isOpen) {
+          const contextMenuTarget = props.xy.trigger
           restoreTarget.value =
-            document.activeElement instanceof HTMLElement ? document.activeElement : null
+            contextMenuTarget instanceof HTMLElement
+              ? contextMenuTarget
+              : document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null
           shouldRestoreFocus = false
           focusItem(getFirstEnabledIndex(props.menus.length, isIndexUnavailable))
           return
