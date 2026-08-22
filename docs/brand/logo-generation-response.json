@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "operation": "generate",
+  "model": "gpt-image-2",
+  "intended_prompt_file": "docs/brand/logo-generation-prompt.md",
+  "intended_prompt_sha256": "acc08972af585f2008651b12d14765058544ac6ee3f0074849162d02649d8b60",
+  "actual_request_prompt_file": "docs/brand/logo-generation-request-prompt.txt",
+  "actual_request_prompt_sha256": "deffa12af8e44ae69f4b844799a69684aab5ebb6197a43966d68c76ceadd7c64",
+  "encoding_note": "The PowerShell invocation altered non-ASCII punctuation in the actual request. Both the intended and exact request prompts are preserved.",
+  "parameters": {
+    "size": "1024x1024",
+    "quality": "high",
+    "n": 1,
+    "output_format": "png",
+    "response_format": "b64_json",
+    "extra": {}
+  },
+  "files": [
+    {
+      "path": "docs/brand/logo-master.png",
+      "format": "png",
+      "source": "b64_json"
+    }
+  ],
+  "warnings": []
+}

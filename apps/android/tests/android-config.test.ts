@@ -30,9 +30,18 @@ describe('Android build baseline', () => {
   })
 
   it('uses the z-music-desktop brand for the native launch surface', () => {
-    const manifest = Object.entries(xmlFiles).find(([file]) => file.endsWith('/android/app/src/main/AndroidManifest.xml'))?.[1] ?? ''
-    const styles = Object.entries(xmlFiles).find(([file]) => file.endsWith('/android/app/src/main/res/values/styles.xml'))?.[1] ?? ''
-    expect(manifest).toContain('@drawable/ic_launcher_brand')
+    const manifest =
+      Object.entries(xmlFiles).find(([file]) =>
+        file.endsWith('/android/app/src/main/AndroidManifest.xml')
+      )?.[1] ?? ''
+    const styles =
+      Object.entries(xmlFiles).find(([file]) =>
+        file.endsWith('/android/app/src/main/res/values/styles.xml')
+      )?.[1] ?? ''
+
+    expect(manifest).toContain('android:icon="@mipmap/ic_launcher"')
+    expect(manifest).toContain('android:roundIcon="@mipmap/ic_launcher_round"')
+    expect(manifest).not.toContain('@drawable/ic_launcher_brand')
     expect(styles).toContain('@drawable/splash_brand')
   })
 })

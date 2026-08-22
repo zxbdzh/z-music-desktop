@@ -1,7 +1,7 @@
 # z-music-desktop 独立品牌 Logo 设计
 
 日期：2026-08-22
-状态：设计已批准，待精修母版复核
+状态：已实施；本地门禁通过，APK 编译受本机缺少 Android SDK 限制
 
 ## 目标
 
@@ -88,10 +88,11 @@ PNG 尺寸必须与文件名一致；ICO 必须包含 Windows 常用尺寸；ICN
 
 ### Android
 
-- 更新 `ic_launcher_brand.xml` 的几何标记为同一单 Z 语义。
-- 保留 Android adaptive icon 的 safe zone、背景资源和现有 Manifest 引用。
-- 必要时同步 mipmap launcher PNG、foreground 与 round 变体，使旧设备和 adaptive icon 路径一致。
-- Splash 品牌图仅在其当前含义与 launcher 标记一致时同步更新，不改变启动页布局。
+- 将 Manifest 入口统一为 `@mipmap/ic_launcher` 与 `@mipmap/ic_launcher_round`。
+- 保留 Android adaptive icon 的 safe zone，以暖白背景和同一透明母版生成 foreground。
+- 同步 mipmap launcher PNG、foreground 与 round 五档密度，使旧设备和 adaptive icon 路径一致。
+- 使用同一透明母版更新 splash layer-list 与横竖屏 PNG，不改变启动页布局。
+- 删除不再引用的 `ic_launcher_brand.xml`、默认 Android foreground 和网格背景资源。
 
 ## 生成与派生流程
 
@@ -106,11 +107,23 @@ PNG 尺寸必须与文件名一致；ICO 必须包含 Windows 常用尺寸；ICN
 - README 图片路径存在，链接均指向 `zxbdzh/z-music-desktop`。
 - 所有 PNG 尺寸、色彩格式和文件签名符合用途。
 - ICO/ICNS 可解析且包含所需尺寸。
-- Android vector XML、Manifest 与 adaptive icon 引用有效。
+- Android Manifest、adaptive icon XML、mipmap launcher 与 splash 引用有效。
 - 16、32、64、200、512 和 1024 像素预览可生成且无裁边。
 - 圆形裁切预览不损失 Z 的主要轮廓。
 - `git diff --check`、相关 lint/test/build 检查通过。
 - 只提交品牌资产、README/配置必要修改和生成记录，不提交 `output/`、依赖或构建产物。
+
+## 实施与验证结果
+
+- 批准母版 SHA-256：`9a9df658e8f60ff07b6d72f3401719e0c1ab5a8d1b00634d5593a6daa6c0646f`。
+- 41 个派生资产连续两次生成逐字节一致。
+- `pnpm brand:check` 通过；PNG、七层 ICO、完整 ICNS、Android 五档 launcher 与 splash 均通过结构检查。
+- 桌面 lint 通过，结果为 0 errors、233 条既有 warnings。
+- 桌面测试通过，45 个测试文件、322 项测试全部成功。
+- 桌面生产构建通过。
+- Android 类型检查、4 个测试文件/9 项测试和 Vite 生产构建通过。
+- Gradle 8.14.3、Temurin JDK 21 与 Capacitor 配置成功；Debug APK 在 `processDebugResources` 前因本机未安装 Android SDK 而停止，未发现品牌资源编译错误。
+- `.github/social-preview.png` 符合 GitHub 官方 1280×640、PNG、小于 1 MB 的要求；远端上传仍需已登录的 GitHub Settings 会话。
 
 ## 非目标
 

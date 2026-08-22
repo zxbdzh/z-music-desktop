@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "source": "docs/brand/logo-master.png",
+  "sourceSha256": "9a9df658e8f60ff07b6d72f3401719e0c1ab5a8d1b00634d5593a6daa6c0646f",
+  "mark": "docs/brand/logo-mark.png",
+  "markSha256": "6f4e7ad5130554eab0b68193e0bef7ed1be80a74e2f1c14cafe2852fb5a460d3",
+  "desktopPngSizes": [
+    16,
+    32,
+    48,
+    64,
+    128,
+    256,
+    512
+  ],
+  "windowsIcoSizes": [
+    16,
+    24,
+    32,
+    48,
+    64,
+    128,
+    256
+  ],
+  "androidLegacySizes": {
+    "mdpi": 48,
+    "hdpi": 72,
+    "xhdpi": 96,
+    "xxhdpi": 144,
+    "xxxhdpi": 192
+  },
+  "androidForegroundSizes": {
+    "mdpi": 108,
+    "hdpi": 162,
+    "xhdpi": 216,
+    "xxhdpi": 324,
+    "xxxhdpi": 432
+  },
+  "socialPreview": "1280x640"
+}
