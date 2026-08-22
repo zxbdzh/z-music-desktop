@@ -1,0 +1,9 @@
+{
+  "state": "success",
+  "pending": false,
+  "items": [
+    { "id": "fixture-item-001", "title": "Deterministic sample", "artworkUrl": "https://example.invalid/artwork/sample.png" },
+    { "id": "fixture-item-002", "title": "Second deterministic sample", "artworkUrl": "https://example.invalid/artwork/sample-2.png" }
+  ],
+  "total": 2
+}

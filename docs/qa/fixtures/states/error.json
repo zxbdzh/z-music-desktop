@@ -1,0 +1,6 @@
+{
+  "state": "error",
+  "pending": false,
+  "items": [],
+  "error": { "code": "FIXTURE_NETWORK_ERROR", "message": "Deterministic fixture failure." }
+}

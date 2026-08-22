@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:z-music-desktop:qa:evidence-manifest:v1",
+  "title": "z-music-desktop (Z) executable acceptance evidence manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "commit", "generatedAt", "fixtureCatalog", "matrix"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "kind": { "const": "executable-product-evidence" },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "fixtureCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "path"],
+      "properties": {
+        "version": { "const": "1.0" },
+        "path": { "const": "docs/qa/fixtures/catalog.v1.json" }
+      }
+    },
+    "matrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/matrixRow" }
+    }
+  },
+  "$defs": {
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "action", "target"],
+      "properties": {
+        "tool": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "storage", "path", "sha256"],
+      "properties": {
+        "type": { "enum": ["screenshot", "log"] },
+        "storage": { "enum": ["checked-in", "ci-artifact"] },
+        "path": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "artifactName": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "storage": { "const": "ci-artifact" } } },
+          "then": { "required": ["artifactName"] },
+          "else": { "not": { "required": ["artifactName"] } }
+        }
+      ]
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["viewport", "orientation", "theme", "fontScale", "reducedMotion"],
+      "properties": {
+        "viewport": { "$ref": "#/$defs/viewport" },
+        "orientation": { "enum": ["portrait", "landscape"] },
+        "theme": { "enum": ["light", "dark", "system"] },
+        "fontScale": { "type": "number", "exclusiveMinimum": 0 },
+        "reducedMotion": { "type": "boolean" }
+      }
+    },
+    "electronTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "os"],
+      "properties": {
+        "platform": { "const": "electron" },
+        "os": { "enum": ["windows", "linux", "macos"] }
+      }
+    },
+    "androidTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "deviceType", "device", "apiLevel"],
+      "properties": {
+        "platform": { "const": "android" },
+        "deviceType": { "enum": ["emulator", "physical"] },
+        "device": { "type": "string", "minLength": 1 },
+        "apiLevel": { "enum": [24, 35, 36] }
+      }
+    },
+    "matrixRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "issue", "state", "target", "display", "operationPath", "artifacts", "result"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "issue": { "type": "integer", "minimum": 1 },
+        "state": { "enum": ["loading", "empty", "partial", "error", "permission-denied", "success"] },
+        "target": { "oneOf": [{ "$ref": "#/$defs/electronTarget" }, { "$ref": "#/$defs/androidTarget" }] },
+        "display": { "$ref": "#/$defs/display" },
+        "operationPath": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/action" }
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/artifact" }
+        },
+        "result": { "enum": ["PASS", "FAIL"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "state": "permission-denied",
+  "pending": false,
+  "items": [],
+  "permission": { "name": "media-library", "status": "denied" }
+}

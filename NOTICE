@@ -1,0 +1,24 @@
+z-music-desktop
+Copyright 2026 zxbdzh
+
+This product includes software developed by contributors to:
+
+- ikunshare/ikun-music-desktop
+  https://github.com/ikunshare/ikun-music-desktop
+
+- lyswhut/lx-music-desktop
+  https://github.com/lyswhut/lx-music-desktop
+
+The upstream projects and this derivative work are distributed under the
+Apache License, Version 2.0. The full license is included in the LICENSE file.
+The complete pre-independence Git history is preserved in the archived legacy
+fork at https://github.com/zxbdzh/z-music-desktop-legacy-fork to retain
+authorship and modification records.
+
+z-music-desktop is independently maintained and is not an official release of,
+or endorsed by, the upstream projects or their maintainers. Product names and
+trademarks remain the property of their respective owners.
+
+Major modifications in this project include independent product branding,
+desktop experience changes, additional music-library and long-form audio
+workflows, platform adapters, and an Android client under development.

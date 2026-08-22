@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "deterministic-qa-fixture-catalog",
+  "requiredStates": [
+    "loading",
+    "empty",
+    "partial",
+    "error",
+    "permission-denied",
+    "success"
+  ],
+  "fixtures": [
+    {
+      "state": "loading",
+      "path": "docs/qa/fixtures/states/loading.json",
+      "sha256": "67d002236600fb138bd225685cfd00fe88168c8d7434b2da9fe8750d7eef7908"
+    },
+    {
+      "state": "empty",
+      "path": "docs/qa/fixtures/states/empty.json",
+      "sha256": "05c17b010b7c605699acde89e4d9e56c10ee77839007e35c21b79fd284bdda07"
+    },
+    {
+      "state": "partial",
+      "path": "docs/qa/fixtures/states/partial.json",
+      "sha256": "d0b159982d495c2dcee3475761de7933ee9ead50f2126e496b6214471bc3079b"
+    },
+    {
+      "state": "error",
+      "path": "docs/qa/fixtures/states/error.json",
+      "sha256": "fa80084218edd1eea5352c89ba19a64ef654c2cd3ce0a8a557e9827edfb6c6a5"
+    },
+    {
+      "state": "permission-denied",
+      "path": "docs/qa/fixtures/states/permission-denied.json",
+      "sha256": "aea0a97576f53822646e8d468328b972c92f31cee1d13f45fe2ce7d6c66f6a6d"
+    },
+    {
+      "state": "success",
+      "path": "docs/qa/fixtures/states/success.json",
+      "sha256": "ebe0f48e649712ae34e28c40f4e4278ffef3f045029811cdda1281c01b9812fd"
+    }
+  ]
+}

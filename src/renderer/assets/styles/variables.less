@@ -1,0 +1,96 @@
+@import './colors.less';
+
+// Typography
+@font-family-display: 'Segoe UI Variable Display', 'PingFang SC', 'Microsoft YaHei', system-ui;
+@font-family-text: 'Segoe UI Variable Text', 'PingFang SC', 'Microsoft YaHei', system-ui;
+@font-family-ui: @font-family-text;
+@font-size-page-title: 22px;
+@line-height-page-title: 30px;
+@font-weight-page-title: 650;
+@font-size-section-title: 16px;
+@line-height-section-title: 24px;
+@font-weight-section-title: 600;
+@font-size-body: 14px;
+@line-height-body: 21px;
+@font-weight-body: 400;
+@font-size-compact-list: 13px;
+@line-height-compact-list: 20px;
+@font-weight-compact-list: 400;
+@font-size-label: 12px;
+@line-height-label: 16px;
+@font-weight-label: 500;
+@font-size-playback-time: 13px;
+@line-height-playback-time: 18px;
+@font-weight-playback-time: 500;
+@font-variant-numeric-tabular: tabular-nums;
+
+// Shell
+@width-sidebar-expanded: 184px;
+@width-sidebar-compact: 64px;
+@width-app-left: @width-sidebar-compact;
+@height-toolbar: 56px;
+@height-player: 72px;
+@size-player-cover: 56px;
+
+// Spacing
+@space-1: 4px;
+@space-2: 8px;
+@space-3: 12px;
+@space-4: 16px;
+@space-5: 24px;
+@space-6: 32px;
+
+// Controls and icons
+@height-control-small: 32px;
+@height-control-medium: 36px;
+@height-control-large: 40px;
+@size-icon-small: 16px;
+@size-icon-medium: 20px;
+@size-icon-large: 24px;
+@size-icon-hit-area: 40px;
+
+// Shadow and focus
+@shadow-app: 8px;
+@shadow-overlay: 0 8px 24px rgba(17, 21, 19, 0.12);
+@shadow-modal: 0 16px 40px rgba(17, 21, 19, 0.18);
+@width-focus-ring: 2px;
+@offset-focus-ring: 2px;
+
+// Radius
+@radius-small: 4px;
+@radius-medium: 6px;
+@radius-large: 8px;
+@radius-progress-border: @radius-medium;
+@radius-border: @radius-small;
+@form-radius: @radius-small;
+
+// Layers
+@z-index-base: 0;
+@z-index-sticky: 10;
+@z-index-dropdown: 100;
+@z-index-overlay: 1000;
+@z-index-modal: 1100;
+@z-index-toast: 1200;
+
+// Motion
+@motion-press: 120ms;
+@motion-enter: 200ms;
+@motion-exit: 140ms;
+@motion-state: 180ms;
+@motion-reduced: 140ms;
+@ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+@ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+@motion-distance-small: 4px;
+@motion-distance-medium: 8px;
+
+// Migration aliases used throughout the current renderer.
+@motion-duration-press: @motion-press;
+@motion-duration-enter: @motion-enter;
+@motion-duration-exit: @motion-exit;
+@motion-duration-state: @motion-state;
+@motion-duration-reduced: @motion-reduced;
+@motion-ease-out: @ease-out;
+@motion-ease-in-out: @ease-in-out;
+@transition-fast: @motion-press @ease-out;
+@transition-normal: @motion-state @ease-out;
+@transition-slow: @motion-enter @ease-out;

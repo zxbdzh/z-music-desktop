@@ -1,0 +1,9 @@
+{
+  "state": "partial",
+  "pending": false,
+  "items": [
+    { "id": "fixture-item-001", "title": "Deterministic sample", "artworkUrl": "https://example.invalid/artwork/sample.png" }
+  ],
+  "total": 2,
+  "warning": "One deterministic item is unavailable."
+}

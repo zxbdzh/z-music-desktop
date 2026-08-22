@@ -1,0 +1,20 @@
+name: Setup
+description: Setup Node Env
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Install pnpm
+      uses: pnpm/action-setup@v5
+      with:
+        version: 9
+        cache: true
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash
