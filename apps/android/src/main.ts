@@ -7,7 +7,7 @@ import LibraryView from './views/LibraryView.vue'
 import PodcastsView from './views/PodcastsView.vue'
 import ReportsView from './views/ReportsView.vue'
 import SettingsView from './views/SettingsView.vue'
-import { createBrowserPlatform, providePlatform } from './platform'
+import { createUnavailablePlatform, providePlatform } from './platform'
 import './styles/base.css'
 
 const router = createRouter({
@@ -27,5 +27,8 @@ const router = createRouter({
 
 const app = createApp(App)
 app.use(router)
-providePlatform(app, createBrowserPlatform())
+const platform = import.meta.env.DEV
+  ? (await import('./platform/browser')).createBrowserPlatform()
+  : createUnavailablePlatform()
+providePlatform(app, platform)
 app.mount('#app')

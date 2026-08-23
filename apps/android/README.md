@@ -4,8 +4,8 @@
 
 ## 环境
 
-- Node 22
-- pnpm 10+
+- Node 22.22.0
+- pnpm 10.34.5
 - JDK 21（执行 Android Gradle 构建时）
 - Android SDK 36（执行 Android Gradle 构建时）
 
@@ -13,25 +13,31 @@
 
 ## 开发
 
-```powershell
-pnpm install
-pnpm dev
-pnpm typecheck
-pnpm test
-pnpm build
+从仓库根目录执行以下命令。Windows、Linux 和 macOS 使用相同的命令名：
+
+```shell
+pnpm android:install
+pnpm android:test
+pnpm android:typecheck
+pnpm android:sync
 ```
 
-首次生成 Android 工程（需要联网，不需要在生成阶段安装 SDK）：
+`android:install` 对根 `pnpm-lock.yaml` 执行 `--ignore-scripts` frozen install（只提供共享源码的 TypeScript/Vite 配置依赖），随后对 `apps/android/pnpm-lock.yaml` 执行独立 frozen install；Android job 不重建 Electron native 模块。仓库不维护 npm lockfile，也不在质量门禁中运行会改写依赖树的 `npm install`。两个 `package.json` 和 CI 使用同一 Node/pnpm 工具链。`android:sync` 会先构建 Web 资源，再同步 Capacitor Android 工程，避免同步过期的 `dist` 内容。单独调试某一步时仍可使用 `android:build:web` 和 `android:cap:sync`。
 
-```powershell
-pnpm cap:add
-pnpm cap:sync
+Gradle 单元测试和 debug APK 也从仓库根目录执行：
+
+```shell
+pnpm android:gradle:unit
+pnpm android:gradle:debug
+pnpm android:scan:apk
 ```
 
-有 Android SDK 后构建 debug 包：
+Gradle 脚本只接受 `:app:testDebugUnitTest` 和 `:app:assembleDebug` 两个任务，在 Windows 调用 `gradlew.bat`，在 Linux 和 macOS 调用 `./gradlew`。debug APK 输出到 `apps/android/android/app/build/outputs/apk/debug/app-debug.apk`。`android:scan:apk` 会验证 ZIP/CRC/APK 结构并扫描全部打包条目，发现 Electron/Node 运行时引用、Browser mock/开发地址、作者默认服务地址或明文凭据时失败。CI 上传 APK、Gradle 测试报告、扫描报告与 SHA-256，artifact 名称固定为 `z-music-desktop-android-debug`。
 
-```powershell
-pnpm android:assembleDebug
+本地 Web 预览仍可在子目录启动：
+
+```shell
+pnpm --dir apps/android dev
 ```
 
 ## 平台边界
@@ -40,7 +46,7 @@ pnpm android:assembleDebug
 
 `SettingsStore`、`SecureCredentialStore`、`HttpClient`、`FilePicker`、`DownloadStore`、`Lifecycle`、`Share`、`PlayerBridge`。
 
-`src/platform/browser.ts` 只用于 Web 预览和测试。安全凭据在 Android Keystore adapter 完成前会明确返回不可用错误，避免把凭据落到明文存储。原生实现应通过 `providePlatform()` 注入，不得从页面导入 Electron 或 Node API。
+`src/platform/browser.ts` 只用于 Vite 开发预览，通过 `import.meta.env.DEV` 的动态导入与生产入口隔离。生产包在真实原生 adapter 完成前使用显式 unavailable adapter，不会把设置或凭据写入 `localStorage`，也不会使用内存下载或 mock player。原生实现应通过 `providePlatform()` 注入，不得从页面导入 Electron 或 Node API。
 
 ## 导航与数据范围
 

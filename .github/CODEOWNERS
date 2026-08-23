@@ -1,0 +1,4 @@
+# Dependency graphs have separate lockfile owners even though they share one repository.
+/pnpm-lock.yaml @zxbdzh
+/apps/android/pnpm-lock.yaml @zxbdzh
+/apps/android/package.json @zxbdzh

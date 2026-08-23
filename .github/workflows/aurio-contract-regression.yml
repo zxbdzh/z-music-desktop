@@ -37,7 +37,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.22.0
 
       - name: Install Apifox CLI
         run: npm install --global apifox-cli@2.2.9

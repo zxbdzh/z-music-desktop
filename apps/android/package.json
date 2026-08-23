@@ -4,27 +4,36 @@
   "private": true,
   "description": "z-music-desktop 的 Android（Capacitor）应用壳层",
   "type": "module",
+  "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": ">=22 <23",
-    "pnpm": ">=10"
+    "pnpm": ">=10 <11"
   },
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "pnpm typecheck && pnpm build:web",
+    "build:web": "vite build",
     "typecheck": "vue-tsc --noEmit",
-    "test": "vitest run",
+    "test": "pnpm test:unit && pnpm test:scanners",
+    "test:unit": "vitest run",
     "test:watch": "vitest",
     "cap:add": "cap add android",
-    "cap:sync": "pnpm build && cap sync android",
+    "cap:sync": "cap sync android",
     "cap:open": "cap open android",
-    "android:assembleDebug": "pnpm cap:sync && cd android && gradlew.bat :app:assembleDebug"
+    "android:gradle:unit": "node scripts/run-gradle.mjs :app:testDebugUnitTest",
+    "android:gradle:debug": "node scripts/run-gradle.mjs :app:assembleDebug",
+    "scan:apk": "node scripts/scan-apk.mjs",
+    "test:scanners": "node --test scripts/*.node-test.mjs",
+    "android:assembleDebug": "pnpm build && pnpm cap:sync && pnpm android:gradle:debug"
   },
   "dependencies": {
     "@capacitor/android": "8.5.0",
     "@capacitor/core": "8.5.0",
     "@lucide/vue": "1.31.0",
+    "buffer-crc32": "0.2.13",
     "vue": "3.5.41",
-    "vue-router": "4.5.1"
+    "vue-router": "4.5.1",
+    "yauzl": "2.10.0"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.0",
@@ -33,6 +42,8 @@
     "typescript": "5.9.3",
     "vite": "8.2.1",
     "vitest": "4.1.5",
-    "vue-tsc": "3.3.10"
+    "vue-tsc": "3.3.10",
+    "yaml": "2.8.1",
+    "yazl": "2.5.1"
   }
 }

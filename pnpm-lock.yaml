@@ -2871,7 +2871,7 @@ packages:
       eslint-plugin-promise: ^6.0.0
 
   eslint-formatter-friendly@https://codeload.github.com/lyswhut/eslint-friendly-formatter/tar.gz/2170d1320e2fad13615a9dcf229669f0bb473a53:
-    resolution: {tarball: https://codeload.github.com/lyswhut/eslint-friendly-formatter/tar.gz/2170d1320e2fad13615a9dcf229669f0bb473a53}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/lyswhut/eslint-friendly-formatter/tar.gz/2170d1320e2fad13615a9dcf229669f0bb473a53}
     version: 5.0.0
     engines: {node: '>=0.10.0'}
 
@@ -4368,7 +4368,7 @@ packages:
     hasBin: true
 
   needle@https://codeload.github.com/lyswhut/needle/tar.gz/93299ac841b7e9a9f82ca7279b88aaaeda404060:
-    resolution: {tarball: https://codeload.github.com/lyswhut/needle/tar.gz/93299ac841b7e9a9f82ca7279b88aaaeda404060}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/lyswhut/needle/tar.gz/93299ac841b7e9a9f82ca7279b88aaaeda404060}
     version: 3.2.0
     engines: {node: '>= 4.4.x'}
     hasBin: true
@@ -5521,7 +5521,7 @@ packages:
     engines: {node: '>=6.0.0'}
 
   spinnies@https://codeload.github.com/lyswhut/spinnies/tar.gz/233305c58694aa3b053e3ab9af9049993f918b9d:
-    resolution: {tarball: https://codeload.github.com/lyswhut/spinnies/tar.gz/233305c58694aa3b053e3ab9af9049993f918b9d}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/lyswhut/spinnies/tar.gz/233305c58694aa3b053e3ab9af9049993f918b9d}
     version: 0.5.1
 
   split-on-first@1.1.0:
@@ -6178,7 +6178,7 @@ packages:
         optional: true
 
   webpack-hot-middleware@https://codeload.github.com/lyswhut/webpack-hot-middleware/tar.gz/329c4375134b89d39da23a56a94db651247c74a1:
-    resolution: {tarball: https://codeload.github.com/lyswhut/webpack-hot-middleware/tar.gz/329c4375134b89d39da23a56a94db651247c74a1}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/lyswhut/webpack-hot-middleware/tar.gz/329c4375134b89d39da23a56a94db651247c74a1}
     version: 2.25.0
 
   webpack-merge@6.0.1:

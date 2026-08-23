@@ -22,20 +22,25 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.34.5
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.22.0
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install dependencies without packaging rebuilds
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify root lockfile is unchanged
+        run: git diff --exit-code -- pnpm-lock.yaml
 
       - name: Check brand assets
         run: pnpm brand:check
@@ -48,3 +53,81 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  android:
+    name: Android test and debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+          cache-dependency-path: apps/android/pnpm-lock.yaml
+
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36"
+
+      - name: Ensure the Linux Gradle wrapper is executable
+        run: chmod +x apps/android/android/gradlew
+
+      - name: Install Android dependencies
+        run: pnpm android:install
+
+      - name: Verify lockfiles are unchanged
+        run: git diff --exit-code -- pnpm-lock.yaml apps/android/pnpm-lock.yaml
+
+      - name: Test Android boundaries and build config
+        run: pnpm android:test
+
+      - name: Typecheck Android app
+        run: pnpm android:typecheck
+
+      - name: Build and sync Android web assets
+        run: pnpm android:sync
+
+      - name: Run Android unit tests
+        run: pnpm android:gradle:unit
+
+      - name: Build Android debug APK
+        run: pnpm android:gradle:debug
+
+      - name: Scan packaged Android debug APK
+        run: |
+          mkdir -p apps/android/android/app/build/reports/security
+          pnpm android:scan:apk | tee apps/android/android/app/build/reports/security/apk-scan.txt
+
+      - name: Hash Android debug APK
+        run: sha256sum apps/android/android/app/build/outputs/apk/debug/app-debug.apk | tee apps/android/android/app/build/reports/security/app-debug.apk.sha256
+
+      - name: Upload Android debug APK and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: z-music-desktop-android-debug
+          path: |
+            apps/android/android/app/build/outputs/apk/debug/app-debug.apk
+            apps/android/android/app/build/reports/**
+          if-no-files-found: error
+          retention-days: 7

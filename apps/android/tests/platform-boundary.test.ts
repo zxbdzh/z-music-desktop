@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-const sourceFiles = import.meta.glob('../src/**/*.{ts,vue}', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
+import { collectModuleSpecifiers, isForbiddenModuleSpecifier } from '../scripts/forbidden-patterns.mjs'
+
+const sourceFiles = import.meta.glob(
+  ['../src/**/*.{ts,vue}', '!../src/platform/browser.ts'],
+  { eager: true, query: '?raw', import: 'default' }
+) as Record<string, string>
 const sharedCoreFiles = import.meta.glob(
   ['../../../src/common/mobile/*.ts', '!../../../src/common/mobile/*.test.ts'],
   { eager: true, query: '?raw', import: 'default' }
@@ -8,21 +13,14 @@ const sharedCoreFiles = import.meta.glob(
 
 describe('Android web shell boundaries', () => {
   it('does not import Electron or Node APIs', () => {
-    const forbiddenImport = /(?:from\s*|import\s*\()(['"])(?:electron|node:|fs(?:\/|['"]|$)|path(?:\/|['"]|$)|child_process(?:\/|['"]|$))/i
     for (const [file, source] of Object.entries(sourceFiles)) {
-      expect(source, file).not.toMatch(forbiddenImport)
+      expect(collectModuleSpecifiers(source).filter(isForbiddenModuleSpecifier), file).toEqual([])
     }
   })
 
   it('keeps the shared core free of platform imports', () => {
     for (const [file, source] of Object.entries(sharedCoreFiles)) {
-      const importSpecifiers = Array.from(
-        source.matchAll(/(?:from\s*|import\s*\()(['"])([^'"]+)\1/g),
-        (match) => match[2]
-      )
-      importSpecifiers.push(
-        ...Array.from(source.matchAll(/\bimport\s*(['"])([^'"]+)\1/g), (match) => match[2])
-      )
+      const importSpecifiers = collectModuleSpecifiers(source)
       expect(importSpecifiers, file).toEqual(
         importSpecifiers.filter(
           (specifier) => specifier.startsWith('./') && !specifier.slice(2).includes('/')
