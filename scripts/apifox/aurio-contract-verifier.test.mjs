@@ -108,12 +108,17 @@ test('accepts complete JSON, JUnit, and Mock audit evidence', () => {
   assert.deepEqual(verifyAuditLog(validAuditLog()), { requests: 22 })
 })
 
-test('keeps privileged regression on main and the protected environment', () => {
+test('keeps privileged regression manual and on the protected main Environment', () => {
+  assert.match(regressionWorkflow, /^  workflow_dispatch:$/m)
+  assert.doesNotMatch(regressionWorkflow, /^  schedule:$/m)
+  assert.doesNotMatch(regressionWorkflow, /^  push:$/m)
   assert.match(regressionWorkflow, /^    if: github\.ref == 'refs\/heads\/main'$/m)
   assert.match(regressionWorkflow, /^    environment: aurio-contract-regression$/m)
+  assert.match(regressionWorkflow, /vars\.APIFOX_REGRESSION_ENABLED/)
+  assert.match(regressionWorkflow, /External Apifox regression skipped because the protected Environment is disabled/)
   assert.match(
     regressionWorkflow,
-    /Missing APIFOX_ACCESS_TOKEN Environment Secret in protected environment aurio-contract-regression/
+    /APIFOX_REGRESSION_ENABLED is true but the protected Environment Secret APIFOX_ACCESS_TOKEN is missing/
   )
   assert.doesNotMatch(regressionWorkflow, /^  pull_request(?:_target)?:/m)
   assert.doesNotMatch(regressionWorkflow, /APIFOX_ACCESS_TOKEN repository secret/i)

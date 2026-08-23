@@ -84,6 +84,7 @@
     "qa:fixtures": "node scripts/qa/evidence.mjs fixtures docs/qa/fixtures/catalog.v1.json",
     "qa:evidence:test": "node --test scripts/qa/evidence.test.mjs",
     "qa:evidence": "pnpm qa:fixtures && pnpm qa:evidence:test",
+    "qa:governance": "node --test scripts/qa/repository-governance.test.mjs",
     "postinstall": "electron-builder install-app-deps",
     "rebuild": "electron-rebuild -f -w better-sqlite3 node-hid",
     "rebuild:halopixel": "electron-rebuild -f -w node-hid",
@@ -210,7 +211,8 @@
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "5.2.2",
     "webpack-hot-middleware": "github:lyswhut/webpack-hot-middleware#329c4375134b89d39da23a56a94db651247c74a1",
-    "webpack-merge": "^6.0.1"
+    "webpack-merge": "^6.0.1",
+    "yaml": "2.8.1"
   },
   "dependencies": {
     "@coooookies/windows-smtc-monitor": "^1.0.12",

@@ -48,8 +48,22 @@ jobs:
         run: |
           cd build
           Get-FileHash *.exe,*.7z -Algorithm MD5 | Format-List
+      - name: Check notification configuration
+        if: always()
+        id: notification
+        shell: pwsh
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PUSHPLUS_TOKEN)) {
+            "configured=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Output "::notice::PushPlus notification skipped because PUSHPLUS_TOKEN is not configured."
+          } else {
+            "configured=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
       - name: Send WeChat Notification
-        if: always() # 无论成功失败都运行，或者用 success()
+        if: always() && steps.notification.outputs.configured == 'true'
         shell: pwsh
         env:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
