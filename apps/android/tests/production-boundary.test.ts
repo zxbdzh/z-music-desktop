@@ -4,19 +4,32 @@ import { describe, expect, it } from 'vitest'
 import { collectModuleSpecifiers, forbiddenPatterns, isForbiddenModuleSpecifier } from '../scripts/forbidden-patterns.mjs'
 
 const productionSources = {
-  ...import.meta.glob('../src/**/*.{ts,tsx,js,jsx,vue}', { eager: true, query: '?raw', import: 'default' }),
+  ...import.meta.glob(
+    ['../src/**/*.{ts,tsx,js,jsx,vue}', '!../src/platform/browser.ts'],
+    { eager: true, query: '?raw', import: 'default' }
+  ),
   ...import.meta.glob('../android/app/src/main/**/*.{java,kt}', { eager: true, query: '?raw', import: 'default' })
 } as Record<string, string>
 
+const browserPreviewSources = import.meta.glob(
+  '../src/platform/browser.ts',
+  { eager: true, query: '?raw', import: 'default' }
+) as Record<string, string>
+
 const fixtureSources = import.meta.glob('./fixtures/**/*', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
 
-const sourceContentPatterns = forbiddenPatterns.filter(({ name }) => !['Electron runtime', 'Node import or runtime'].includes(name))
+const sourceContentPatterns = forbiddenPatterns.filter(({ name }) => ![
+  'Node import or runtime',
+  'Browser preview adapter'
+].includes(name))
 
 describe('Android production source boundary', () => {
   it('scans production web and native sources only', () => {
     expect(Object.keys(productionSources).length).toBeGreaterThan(0)
     expect(Object.values(fixtureSources).join('\n')).toMatch(/fixture-only-secret/)
+    expect(Object.values(browserPreviewSources).join('\n')).toContain('createBrowserPlatform')
     expect(Object.keys(productionSources).some(file => file.includes('/tests/'))).toBe(false)
+    expect(Object.keys(productionSources).some(file => file.endsWith('/platform/browser.ts'))).toBe(false)
   })
 
   it('rejects static, dynamic, side-effect, and CommonJS platform imports', () => {
@@ -76,6 +89,7 @@ describe('Android production source boundary', () => {
     expect(matchedLabels).toEqual(expect.arrayContaining([
       'Electron package or runtime',
       'Node import or runtime',
+      'Browser preview adapter',
       'development-server URL',
       'author-owned API default',
       'literal credential',
@@ -122,6 +136,14 @@ describe('Android production source boundary', () => {
     expect('Authorization = `Basic bGl0ZXJhbDp2YWx1ZQ==`').toMatch(sensitiveMaterialPattern!)
     expect('-----BEGIN OPENSSH PRIVATE KEY-----').toMatch(sensitiveMaterialPattern!)
     expect('https://api.example.com/v1').not.toMatch(developmentPattern!)
+  })
+
+  it('keeps Browser preview code out of the production entry graph', () => {
+    const main = productionSources['../src/main.ts']
+    expect(main).toContain("import.meta.env.DEV")
+    expect(main).toContain("await import('./platform/browser')")
+    expect(main).toContain('createUnavailablePlatform()')
+    expect(main).not.toContain("from './platform/browser'")
   })
 
   it.each(sourceContentPatterns)('contains no $name', ({ pattern }) => {

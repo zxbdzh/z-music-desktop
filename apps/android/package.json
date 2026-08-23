@@ -4,9 +4,10 @@
   "private": true,
   "description": "z-music-desktop 的 Android（Capacitor）应用壳层",
   "type": "module",
+  "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": ">=22 <23",
-    "pnpm": ">=10"
+    "pnpm": ">=10 <11"
   },
   "scripts": {
     "dev": "vite",

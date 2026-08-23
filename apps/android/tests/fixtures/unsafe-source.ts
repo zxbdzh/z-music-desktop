@@ -13,6 +13,8 @@ export const unsafeExamples = [
   "import promises from 'fs/promises'",
   "const childProcess = require('child_process')",
   "const commentedFs = require/*fixture-comment*/('fs')",
+  "const browserAdapter = createBrowserPlatform()",
+  "class MemoryDownloadStore {}",
   'http://localhost:4174',
   'http://10.0.2.2:4174',
   'http://192.168.1.20:8080/api',

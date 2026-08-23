@@ -2,11 +2,12 @@
   "name": "z-music-desktop",
   "version": "1.4.5",
   "description": "A modern cross-platform desktop music player",
+  "packageManager": "pnpm@10.34.5",
   "main": "./dist/main.js",
   "scripts": {
     "test": "vitest",
     "test:run": "vitest run",
-    "android:install": "pnpm --dir apps/android install --frozen-lockfile",
+    "android:install": "pnpm install --frozen-lockfile --ignore-scripts && pnpm --dir apps/android install --frozen-lockfile",
     "android:test": "pnpm --dir apps/android test",
     "android:typecheck": "pnpm --dir apps/android typecheck",
     "android:build:web": "pnpm --dir apps/android build:web",
@@ -88,8 +89,8 @@
     "Electron 38.8.6"
   ],
   "engines": {
-    "node": ">= 22",
-    "npm": ">=8.5.2"
+    "node": ">=22 <23",
+    "pnpm": ">=10 <11"
   },
   "macLanguagesInfoPlistStrings": {
     "en": {

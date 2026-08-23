@@ -173,6 +173,7 @@ test('APK scanner rejects expanded malicious packaged content and exits nonzero'
     'assets/public/subpaths.js': "import main from 'electron/main'; import common from 'electron/common'; import renderer from 'electron/renderer'; import utility from 'electron/utility'",
     'assets/public/node.js': "import/*comment*/('electron'); require/*comment*/('fs'); import diagnostics from 'node:diagnostics_channel'; const fs = require('fs/promises')",
     'assets/public/config.json': '{"token":"packaged-token","cookie":"packaged-cookie","Authorization":"Basic cGFja2FnZWQ6c2VjcmV0","authorization":"Bearer packaged-bearer","baseUrl":"https://music.zxbdwy.online/api"}',
+    'assets/public/browser-mock.js': 'const platform = createBrowserPlatform(); class MemoryDownloadStore {}',
     'assets/public/secrets.js': 'const password = `packaged-password`; const accessToken = `packaged-access-token`',
     'assets/public/server.js': "const emulator = 'http://10.0.2.2:4174'; const lan = 'http://192.168.1.20:8080/api'; const reserved = 'https://music-app.test/api'",
     'assets/public/private-key.txt': '-----BEGIN OPENSSH PRIVATE KEY-----'
@@ -184,6 +185,7 @@ test('APK scanner rejects expanded malicious packaged content and exits nonzero'
   assert.ok(result.findings.some(finding => finding.includes('Node import or runtime')))
   assert.ok(result.findings.some(finding => finding.includes('development-server URL')))
   assert.ok(result.findings.some(finding => finding.includes('author-owned API default')))
+  assert.ok(result.findings.some(finding => finding.includes('Browser preview adapter')))
   assert.ok(result.findings.some(finding => finding.includes('literal credential')))
   assert.ok(result.findings.some(finding => finding.includes('literal bearer or private key')))
 
@@ -198,6 +200,7 @@ test('APK scanner independently rejects each newly covered packaged bypass', asy
     ['electron-subpaths', "import main from 'electron/main'; import common from 'electron/common'; import renderer from 'electron/renderer'; import utility from 'electron/utility'", 'Electron or Node import'],
     ['commented-import', "import/*comment*/('electron')", 'Electron or Node import'],
     ['commented-require', "require/*comment*/('fs')", 'Electron or Node import'],
+    ['browser-preview-adapter', 'const platform = createBrowserPlatform()', 'Browser preview adapter'],
     ['backtick-credential', 'const password = `packaged-password`', 'literal credential'],
     ['basic-authorization', 'Authorization = `Basic cGFja2FnZWQ6c2VjcmV0`', 'literal bearer or private key'],
     ['reserved-test-host', "const api = 'https://music-app.test/api'", 'development-server URL']

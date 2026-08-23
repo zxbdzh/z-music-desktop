@@ -12,6 +12,10 @@ export const forbiddenPatterns = Object.freeze([
     pattern: /(?:\bnode:[a-z][\w/-]*\b|\bprocess\.versions\.node\b|\bNode\.js\b)/i
   },
   {
+    name: 'Browser preview adapter',
+    pattern: /(?:createBrowserPlatform|LocalSettingsStore|MemoryDownloadStore|BrowserFilePicker|BrowserLifecycle|BrowserShare|NoopPlayerBridge)/
+  },
+  {
     name: 'development-server URL',
     pattern: /https?:\/\/(?:localhost|127(?:\.\d{1,3}){3}|0\.0\.0\.0|\[::1\]|\[(?:f[cd][0-9a-f]{2}|fe[89ab][0-9a-f])(?::[0-9a-f]{0,4})+\]|10\.0\.2\.2|10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2}|169\.254(?:\.\d{1,3}){2}|[a-z0-9-]+\.local|(?:[a-z0-9-]+\.)+test|host\.docker\.internal)(?::\d+)?(?:[/?#]|['"`]|$)/i
   },

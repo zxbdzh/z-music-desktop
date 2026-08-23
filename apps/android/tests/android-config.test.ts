@@ -5,6 +5,7 @@ const gradleFiles = import.meta.glob('../android/**/*.{gradle,properties}', { ea
 const nativeFiles = import.meta.glob('../android/**/*.{java,kt}', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
 const xmlFiles = import.meta.glob('../android/**/*.xml', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
 const capacitorConfigSource = readFileSync(new URL('../capacitor.config.ts', import.meta.url), 'utf8')
+const viteConfigSource = readFileSync(new URL('../vite.config.ts', import.meta.url), 'utf8')
 
 function sourceEndingWith(suffix: string): string {
   const entry = Object.entries(gradleFiles).find(([file]) => file.endsWith(`/android/${suffix}`))
@@ -28,6 +29,10 @@ describe('Android build baseline', () => {
     expect(capacitorConfigSource).toContain("appId: 'io.github.zxbdzh.zmusic'")
     expect(sourceEndingWith('app/build.gradle')).toContain('applicationId "io.github.zxbdzh.zmusic"')
     expect(sourceEndingWith('app/build.gradle')).toContain('namespace = "io.github.zxbdzh.zmusic"')
+  })
+
+  it('keeps production source maps out of the APK', () => {
+    expect(viteConfigSource).toContain('sourcemap: false')
   })
 
   it('keeps native source free of Electron and Node imports', () => {

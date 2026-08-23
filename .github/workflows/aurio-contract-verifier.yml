@@ -26,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.22.0
 
       - name: Test contract verifier
         run: node --test scripts/apifox/aurio-contract-verifier.test.mjs

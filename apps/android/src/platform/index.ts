@@ -3,7 +3,7 @@ import { inject } from 'vue'
 import type { PlatformServices } from './contracts'
 
 export * from './contracts'
-export { createBrowserPlatform } from './browser'
+export { createUnavailablePlatform } from './unavailable'
 
 export const platformKey: InjectionKey<PlatformServices> = Symbol('z-music-desktop.platform')
 

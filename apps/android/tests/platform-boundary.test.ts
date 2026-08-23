@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 
 import { collectModuleSpecifiers, isForbiddenModuleSpecifier } from '../scripts/forbidden-patterns.mjs'
 
-const sourceFiles = import.meta.glob('../src/**/*.{ts,vue}', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>
+const sourceFiles = import.meta.glob(
+  ['../src/**/*.{ts,vue}', '!../src/platform/browser.ts'],
+  { eager: true, query: '?raw', import: 'default' }
+) as Record<string, string>
 const sharedCoreFiles = import.meta.glob(
   ['../../../src/common/mobile/*.ts', '!../../../src/common/mobile/*.test.ts'],
   { eager: true, query: '?raw', import: 'default' }
