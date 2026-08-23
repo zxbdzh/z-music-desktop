@@ -12,6 +12,10 @@ const quality = workflow('quality-gate.yml')
 const verifier = workflow('aurio-contract-verifier.yml')
 const regression = workflow('aurio-contract-regression.yml')
 const release = workflow('release.yml')
+const acceptance = readFileSync(
+  new URL('../../docs/qa/repository-ready-acceptance.md', import.meta.url),
+  'utf8'
+)
 
 export const requiredChecks = Object.freeze([
   'Desktop lint, test and build',
@@ -50,6 +54,26 @@ test('isolates external regression behind a protected manual Environment', () =>
   assert.match(regression.source, /configured=false/)
   assert.match(regression.source, /APIFOX_REGRESSION_ENABLED is true but/)
   assert.doesNotMatch(regression.source, /APIFOX_ACCESS_TOKEN repository secret/i)
+})
+
+test('keeps the Repository Ready acceptance matrix aligned with workflows', () => {
+  for (const check of requiredChecks) assert.ok(acceptance.includes(check))
+  for (const artifact of [
+    'lint-quality-report',
+    'repository-ready-evidence',
+    'z-music-desktop-android-debug',
+  ]) {
+    assert.ok(acceptance.includes(artifact))
+    assert.ok(quality.source.includes(artifact))
+  }
+  for (const invariant of [
+    'strict contexts',
+    'conversation resolution',
+    'administrator',
+    'force-push/deletion disabled',
+    'APIFOX_REGRESSION_ENABLED=false',
+    'verify-bundle',
+  ]) assert.ok(acceptance.includes(invariant))
 })
 
 test('keeps release candidates read-only, main-only, and non-publishing', () => {
