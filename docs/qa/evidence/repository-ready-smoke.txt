@@ -1,0 +1,15 @@
+schemaVersion=1.0
+kind=redacted-product-smoke-log
+fixture=docs/qa/fixtures/states/success.json
+tool=agent-browser 0.27.0
+target=Electron renderer on Windows
+action=connect to the local product renderer through CDP
+action=snapshot the home navigation and primary controls
+action=activate the Music Library navigation link
+observation=Music Library heading, source filters, and list controls were accessible
+result=PASS
+
+supplementalTarget=Android web preview at 390x844
+supplementalAction=activate the Discover navigation link
+supplementalObservation=Discover route and content tabs were accessible
+supplementalResult=PASS

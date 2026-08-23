@@ -1,49 +1,71 @@
-# z-music-desktop (Z) acceptance evidence
+# z-music-desktop acceptance evidence
 
-This directory contains durable, reviewable acceptance evidence. It deliberately
-keeps executable product evidence separate from generated design mockups.
+This directory contains durable, reviewable acceptance evidence. Executable product
+evidence is kept separate from generated design mockups.
 
-## Design
+## Contract
 
-`schema/evidence-manifest.v1.schema.json` is the versioned interchange contract.
-Every matrix cell is one self-contained row: it names the fixture state, target,
-display settings, exact operation path, result, and artifacts. Electron rows must
-record Orca Computer Use actions; Android rows must identify the device or emulator
-and use one of the frozen acceptance API levels: 24, 35, or 36. Electron targets
-remain explicit matrix rows and identify Windows, Linux, or macOS.
+`schema/evidence-manifest.v1.schema.json` is the JSON Schema contract. Every matrix
+row names the fixture state, target, display settings, exact operation path, result,
+and artifacts. Electron rows use `agent-browser`; Android rows identify the device
+or emulator, use API 24, 35, or 36, and record `adb`, `android-emulator`, or
+`android-device` actions.
 
-Small, redacted evidence may be checked in below `docs/qa/evidence/`. Large files
-belong in a CI artifact with a stable `artifactName`; the checked-in manifest keeps
-the artifact-relative path. Generated design mockups must live outside
-`docs/qa/evidence/` and use a different manifest kind.
+Small redacted logs may be checked in below `docs/qa/evidence/`. Large files and
+build reports belong in stable CI artifacts. A CI artifact row keeps an
+artifact-relative POSIX path, stable `artifactName`, and SHA-256. Validation requires
+an explicit `--artifact-root NAME=PATH`, then checks file existence, hash, path
+containment, and log redaction.
 
-`fixtures/catalog.v1.json` is the canonical catalog for deterministic QA states.
-The catalog pins one JSON file for each required state and includes a SHA-256 digest
-of its LF-normalized bytes, so accidental fixture drift is visible in review on both
-Windows and Linux.
+`fixtures/catalog.v1.json` pins one LF-normalized JSON fixture for every canonical
+state: loading, empty, partial, error, permission-denied, and success.
 
-## Validate
+## Template And Commit Binding
 
-Validate a checked-in manifest against the current checkout:
+A tracked manifest cannot contain the hash of the commit that contains itself.
+`evidence/repository-ready.template.json` therefore uses the fixed placeholders
+`__CURRENT_COMMIT__`, `__GENERATED_AT__`, and `__SHA256__`. The quality job checks out
+the PR head (or push SHA), renders a formal manifest for that exact commit, computes
+artifact hashes, validates the result, writes its SHA-256, and uploads the stable
+`repository-ready-evidence` artifact. A wrong commit cannot be supplied to `render`.
 
-```powershell
-node scripts/qa/evidence.mjs validate docs/qa/evidence/example.json
+The checked-in `repository-ready-smoke.txt` is a small, LF-normalized, redacted
+summary from a real `agent-browser` Electron workflow. It contains no screenshot,
+profile, cookie, local path, service URL, or user content.
+
+## Commands
+
+```shell
+pnpm qa:fixtures
+pnpm qa:evidence:test
+pnpm qa:evidence
 ```
 
-The validation command resolves the current Git `HEAD` and always rejects a
-manifest recorded for another commit. An optional `--commit HASH` assertion is
-accepted only when `HASH` is the current `HEAD`.
+Render and validate a candidate locally after `pnpm lint` creates the mapped CI
+artifact input:
 
-Validate the fixture catalog and run unit tests:
+```shell
+node scripts/qa/evidence.mjs render \
+  docs/qa/evidence/repository-ready.template.json \
+  .artifacts/evidence/repository-ready.manifest.json \
+  --commit "$(git rev-parse HEAD)" \
+  --generated-at "2026-08-23T00:00:00Z" \
+  --artifact-root lint-quality-report=.artifacts/lint
 
-```powershell
-node scripts/qa/evidence.mjs fixtures docs/qa/fixtures/catalog.v1.json
-node --test scripts/qa/evidence.test.mjs
+node scripts/qa/evidence.mjs validate \
+  .artifacts/evidence/repository-ready.manifest.json \
+  --artifact-root lint-quality-report=.artifacts/lint
 ```
 
-The validator rejects missing or hash-mismatched checked-in files, unknown fixture
-states, a manifest commit that differs from the current checkout, unsafe artifact
-paths, private or credential-bearing URLs, file URIs, and common cookie, token,
-session, secret, and credential forms. Checked-in text logs receive the same
-content scan and use LF-normalized SHA-256; screenshot hashes always cover exact
-binary bytes.
+`repository-ready-evidence` is self-contained: it includes the manifest and sidecar,
+schema, fixture catalog/state files, checked-in smoke log, and mapped lint report.
+After downloading it, verify every link against the expected candidate SHA:
+
+```shell
+node scripts/qa/evidence.mjs verify-bundle <downloaded-directory> --commit <candidate-sha>
+```
+
+The validator rejects schema drift, stale commits, unknown states, unsafe paths,
+missing artifacts, hash drift, private or credential-bearing URLs, file URIs, and
+common cookie, token, session, secret, and credential forms. Text logs use
+LF-normalized SHA-256 across Windows and Linux; binary artifacts use exact bytes.

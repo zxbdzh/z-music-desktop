@@ -1,23 +1,28 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import {
+  evidenceStates,
   redactEvidence,
   redactText,
+  renderEvidenceTemplate,
   validateEvidenceManifest,
-  validateFixtureCatalog
+  validateEvidenceSchema,
+  validateFixtureCatalog,
+  verifyEvidenceBundle
 } from './evidence.mjs'
 
 const commit = 'a'.repeat(40)
-const digest = 'b'.repeat(64)
 const checkedInArtifact = 'fixture screenshot'
 const checkedInDigest = createHash('sha256').update(checkedInArtifact).digest('hex')
 const scriptPath = resolve(fileURLToPath(new URL('./evidence.mjs', import.meta.url)))
+const qaRootUrl = new URL('../../docs/qa/', import.meta.url)
+const schemaSource = readFileSync(new URL('schema/evidence-manifest.v1.schema.json', qaRootUrl), 'utf8')
 const roots = []
 
 test.after(() => {
@@ -28,9 +33,20 @@ function fixtureRoot () {
   const root = mkdtempSync(join(tmpdir(), 'z-music-desktop-evidence-'))
   roots.push(root)
   mkdirSync(join(root, 'docs', 'qa', 'evidence'), { recursive: true })
-  mkdirSync(join(root, 'docs', 'qa', 'fixtures'), { recursive: true })
+  mkdirSync(join(root, 'docs', 'qa', 'fixtures', 'states'), { recursive: true })
+  mkdirSync(join(root, 'docs', 'qa', 'schema'), { recursive: true })
   writeFileSync(join(root, 'docs', 'qa', 'evidence', 'screen.png'), checkedInArtifact)
-  writeFileSync(join(root, 'docs', 'qa', 'fixtures', 'catalog.v1.json'), '{}')
+  writeFileSync(
+    join(root, 'docs', 'qa', 'fixtures', 'catalog.v1.json'),
+    readFileSync(new URL('fixtures/catalog.v1.json', qaRootUrl))
+  )
+  for (const state of evidenceStates) {
+    writeFileSync(
+      join(root, 'docs', 'qa', 'fixtures', 'states', `${state}.json`),
+      readFileSync(new URL(`fixtures/states/${state}.json`, qaRootUrl))
+    )
+  }
+  writeFileSync(join(root, 'docs', 'qa', 'schema', 'evidence-manifest.v1.schema.json'), schemaSource)
   return root
 }
 
@@ -68,7 +84,7 @@ function manifest () {
         target: { platform: 'electron', os: 'windows' },
         display: display(),
         operationPath: [
-          { tool: 'orca-computer-use', action: 'click', target: 'Library navigation item' }
+          { tool: 'agent-browser', action: 'click', target: 'Library navigation item' }
         ],
         artifacts: [artifact()],
         result: 'PASS'
@@ -82,22 +98,18 @@ function manifest () {
         operationPath: [
           { tool: 'adb', action: 'tap', target: 'Library navigation item' }
         ],
-        artifacts: [{
-          type: 'log',
-          storage: 'ci-artifact',
-          path: 'android/api-35/library.log',
-          artifactName: 'acceptance-android-api35',
-          sha256: digest
-        }],
+        artifacts: [artifact()],
         result: 'PASS'
       }
     ]
   }
 }
 
-test('accepts complete Electron and Android matrix rows', () => {
+test('accepts complete Electron and Android matrix rows through the JSON schema', () => {
   const root = fixtureRoot()
-  assert.deepEqual(validateEvidenceManifest(manifest(), { root, expectedCommit: commit }), {
+  const value = manifest()
+  assert.equal(validateEvidenceSchema(value, { root }), true)
+  assert.deepEqual(validateEvidenceManifest(value, { root, expectedCommit: commit }), {
     rows: 2,
     commit
   })
@@ -206,15 +218,92 @@ test('scans checked-in log contents before accepting their manifest', () => {
   assert.equal(validateEvidenceManifest(value, { root }).rows, 2)
 })
 
-test('requires Orca Computer Use paths and Android device metadata', () => {
+test('rejects fixture drift while validating a manifest', () => {
+  const root = fixtureRoot()
+  writeFileSync(
+    join(root, 'docs', 'qa', 'fixtures', 'states', 'success.json'),
+    '{"state":"success","items":[]}'
+  )
+  assert.throws(
+    () => validateEvidenceManifest(manifest(), { root }),
+    /fixtureCatalog[\s\S]*sha256 does not match/
+  )
+})
+
+test('requires agent-browser paths and Android device metadata', () => {
   const root = fixtureRoot()
   const value = manifest()
-  value.matrix[0].operationPath[0].tool = 'playwright'
+  value.matrix[0].operationPath[0].tool = 'legacy-browser-tool'
+  value.matrix[1].operationPath[0].tool = 'agent-browser'
   delete value.matrix[1].target.apiLevel
   assert.throws(
     () => validateEvidenceManifest(value, { root }),
-    /orca-computer-use[\s\S]*apiLevel is required/
+    /agent-browser[\s\S]*apiLevel is required[\s\S]*Android device or emulator tooling/
   )
+})
+
+test('validates mapped CI artifacts, hashes, and redacted contents', () => {
+  const root = fixtureRoot()
+  const artifactRoot = join(root, 'ci-artifacts', 'lint-quality-report')
+  mkdirSync(artifactRoot, { recursive: true })
+  const contents = 'quality gate passed\n'
+  writeFileSync(join(artifactRoot, 'report.log'), contents)
+  const value = manifest()
+  value.matrix[1].artifacts[0] = {
+    type: 'log',
+    storage: 'ci-artifact',
+    path: 'report.log',
+    artifactName: 'lint-quality-report',
+    sha256: createHash('sha256').update(contents).digest('hex')
+  }
+
+  assert.equal(validateEvidenceManifest(value, {
+    root,
+    artifactRoots: { 'lint-quality-report': artifactRoot }
+  }).rows, 2)
+
+  assert.throws(() => validateEvidenceManifest(value, { root }), /has no supplied artifact root/)
+  value.matrix[1].artifacts[0].sha256 = '0'.repeat(64)
+  assert.throws(() => validateEvidenceManifest(value, {
+    root,
+    artifactRoots: { 'lint-quality-report': artifactRoot }
+  }), /sha256 does not match/)
+
+  writeFileSync(join(artifactRoot, 'report.log'), 'authorization: Basic dXNlcjpwYXNz')
+  value.matrix[1].artifacts[0].sha256 = createHash('sha256')
+    .update('authorization: Basic dXNlcjpwYXNz')
+    .digest('hex')
+  assert.throws(() => validateEvidenceManifest(value, {
+    root,
+    artifactRoots: { 'lint-quality-report': artifactRoot }
+  }), /log contains secret-like text/)
+})
+
+test('rejects symlinked CI artifacts even when the manifest path stays inside the root', (t) => {
+  const root = fixtureRoot()
+  const artifactRoot = join(root, 'ci-artifacts', 'lint-quality-report')
+  mkdirSync(artifactRoot, { recursive: true })
+  const outside = join(root, 'outside.log')
+  const linked = join(artifactRoot, 'linked.log')
+  writeFileSync(outside, 'quality gate passed\n')
+  try {
+    symlinkSync(outside, linked, 'file')
+  } catch (error) {
+    if (error.code === 'EPERM') return t.skip('symlinks require elevated Windows privileges')
+    throw error
+  }
+  const value = manifest()
+  value.matrix[1].artifacts[0] = {
+    type: 'log',
+    storage: 'ci-artifact',
+    path: 'linked.log',
+    artifactName: 'lint-quality-report',
+    sha256: createHash('sha256').update('quality gate passed\n').digest('hex')
+  }
+  assert.throws(() => validateEvidenceManifest(value, {
+    root,
+    artifactRoots: { 'lint-quality-report': artifactRoot }
+  }), /regular non-symlink file|resolves outside/)
 })
 
 test('rejects secrets, credential URLs, private URLs, and file URIs', () => {
@@ -294,7 +383,7 @@ test('matches schema strictness for viewport properties and RFC3339 date-time', 
   )
 })
 
-test('CLI resolves Git HEAD when --commit is omitted and rejects a stale manifest', () => {
+test('renders a template for Git HEAD and rejects stale commit bypasses', () => {
   const root = fixtureRoot()
   execFileSync('git', ['init', '--quiet'], { cwd: root })
   execFileSync('git', ['config', 'user.email', 'qa@example.invalid'], { cwd: root })
@@ -303,10 +392,27 @@ test('CLI resolves Git HEAD when --commit is omitted and rejects a stale manifes
   execFileSync('git', ['add', 'tracked.txt'], { cwd: root })
   execFileSync('git', ['commit', '--quiet', '-m', 'baseline'], { cwd: root })
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
-  const value = manifest()
-  value.commit = head
+  const template = manifest()
+  template.commit = '__CURRENT_COMMIT__'
+  template.generatedAt = '__GENERATED_AT__'
+  for (const row of template.matrix) {
+    for (const artifact of row.artifacts) artifact.sha256 = '__SHA256__'
+  }
+  const templatePath = join(root, 'docs', 'qa', 'evidence', 'template.json')
   const manifestPath = join(root, 'docs', 'qa', 'evidence', 'manifest.json')
-  writeFileSync(manifestPath, JSON.stringify(value))
+  writeFileSync(templatePath, JSON.stringify(template))
+
+  const rendered = spawnSync(process.execPath, [
+    scriptPath,
+    'render',
+    templatePath,
+    manifestPath,
+    '--commit',
+    head,
+    '--generated-at',
+    '2026-08-23T00:00:00Z'
+  ], { cwd: root, encoding: 'utf8' })
+  assert.equal(rendered.status, 0, rendered.stderr)
 
   const accepted = spawnSync(process.execPath, [scriptPath, 'validate', manifestPath], {
     cwd: root,
@@ -314,22 +420,130 @@ test('CLI resolves Git HEAD when --commit is omitted and rejects a stale manifes
   })
   assert.equal(accepted.status, 0, accepted.stderr)
 
-  value.commit = 'c'.repeat(40)
-  writeFileSync(manifestPath, JSON.stringify(value))
+  const bypassAttempt = spawnSync(process.execPath, [
+    scriptPath,
+    'render',
+    templatePath,
+    manifestPath,
+    '--commit',
+    'c'.repeat(40),
+    '--generated-at',
+    '2026-08-23T00:00:00Z'
+  ], { cwd: root, encoding: 'utf8' })
+  assert.notEqual(bypassAttempt.status, 0)
+  assert.match(bypassAttempt.stderr, /--commit must equal the current Git HEAD/)
+
+  const stale = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  stale.commit = 'c'.repeat(40)
+  writeFileSync(manifestPath, JSON.stringify(stale))
   const rejected = spawnSync(process.execPath, [scriptPath, 'validate', manifestPath], {
     cwd: root,
     encoding: 'utf8'
   })
   assert.notEqual(rejected.status, 0)
   assert.match(rejected.stderr, /commit is stale/)
+})
 
-  const bypassAttempt = spawnSync(
-    process.execPath,
-    [scriptPath, 'validate', manifestPath, '--commit', value.commit],
-    { cwd: root, encoding: 'utf8' }
+test('requires canonical placeholders when rendering evidence templates', () => {
+  const value = manifest()
+  assert.throws(() => renderEvidenceTemplate(value, {
+    commit,
+    generatedAt: '2026-08-23T00:00:00Z'
+  }), /canonical commit and generatedAt placeholders/)
+  value.commit = '__CURRENT_COMMIT__'
+  value.generatedAt = '__GENERATED_AT__'
+  for (const row of value.matrix) {
+    for (const artifact of row.artifacts) artifact.sha256 = '__SHA256__'
+  }
+  assert.equal(renderEvidenceTemplate(value, {
+    root: fixtureRoot(),
+    commit,
+    generatedAt: '2026-08-23T00:00:00Z'
+  }).commit, commit)
+})
+
+test('renders and validates the checked-in Repository Ready template', () => {
+  const root = fileURLToPath(new URL('../..', import.meta.url))
+  const template = JSON.parse(readFileSync(
+    new URL('../../docs/qa/evidence/repository-ready.template.json', import.meta.url),
+    'utf8'
+  ))
+  const artifactRoot = mkdtempSync(join(tmpdir(), 'z-music-lint-artifact-'))
+  roots.push(artifactRoot)
+  const lintReport = '{"schemaVersion":"1.0","result":"PASS"}\n'
+  writeFileSync(join(artifactRoot, 'report.json'), lintReport)
+  const rendered = renderEvidenceTemplate(template, {
+    root,
+    artifactRoots: { 'lint-quality-report': artifactRoot },
+    commit,
+    generatedAt: '2026-08-23T00:00:00Z'
+  })
+  assert.equal(validateEvidenceManifest(rendered, {
+    root,
+    artifactRoots: { 'lint-quality-report': artifactRoot },
+    expectedCommit: commit
+  }).rows, 1)
+})
+
+test('verifies a self-contained evidence bundle and rejects tampering', () => {
+  const bundleRoot = fixtureRoot()
+  const smokeTarget = join(bundleRoot, 'docs', 'qa', 'evidence', 'repository-ready-smoke.txt')
+  writeFileSync(
+    smokeTarget,
+    readFileSync(new URL('../../docs/qa/evidence/repository-ready-smoke.txt', import.meta.url))
   )
-  assert.notEqual(bypassAttempt.status, 0)
-  assert.match(bypassAttempt.stderr, /--commit must equal the current Git HEAD/)
+  const lintRoot = join(bundleRoot, 'artifacts', 'lint-quality-report')
+  mkdirSync(lintRoot, { recursive: true })
+  writeFileSync(join(lintRoot, 'report.json'), '{"schemaVersion":"1.0","result":"PASS"}\n')
+  const template = JSON.parse(readFileSync(
+    new URL('../../docs/qa/evidence/repository-ready.template.json', import.meta.url),
+    'utf8'
+  ))
+  const manifest = renderEvidenceTemplate(template, {
+    root: bundleRoot,
+    artifactRoots: { 'lint-quality-report': lintRoot },
+    commit,
+    generatedAt: '2026-08-23T00:00:00Z'
+  })
+  const manifestPath = join(bundleRoot, 'repository-ready.manifest.json')
+  const manifestContents = `${JSON.stringify(manifest, null, 2)}\n`
+  writeFileSync(manifestPath, manifestContents)
+  writeFileSync(
+    join(bundleRoot, 'repository-ready.manifest.json.sha256'),
+    `${createHash('sha256').update(manifestContents).digest('hex')}  repository-ready.manifest.json\n`
+  )
+  assert.equal(verifyEvidenceBundle(bundleRoot, { expectedCommit: commit }).rows, 1)
+
+  writeFileSync(manifestPath, `${manifestContents} `)
+  assert.throws(
+    () => verifyEvidenceBundle(bundleRoot, { expectedCommit: commit }),
+    /sidecar does not match/
+  )
+  writeFileSync(manifestPath, manifestContents)
+  assert.throws(
+    () => verifyEvidenceBundle(bundleRoot, { expectedCommit: 'b'.repeat(40) }),
+    /commit is stale/
+  )
+})
+
+test('keeps CI artifact names traceable from the template to the workflow', () => {
+  const workflow = readFileSync(
+    new URL('../../.github/workflows/quality-gate.yml', import.meta.url),
+    'utf8'
+  )
+  const template = readFileSync(
+    new URL('../../docs/qa/evidence/repository-ready.template.json', import.meta.url),
+    'utf8'
+  )
+  assert.match(template, /"artifactName": "lint-quality-report"/)
+  assert.match(workflow, /name: lint-quality-report/)
+  assert.match(workflow, /name: repository-ready-evidence/)
+  assert.match(workflow, /evidence\.mjs render/)
+  assert.match(workflow, /evidence\.mjs validate/)
+  assert.match(workflow, /--artifact-root lint-quality-report=\.artifacts\/lint/)
+  assert.match(workflow, /cp docs\/qa\/evidence\/repository-ready-smoke\.txt/)
+  assert.match(workflow, /cp \.artifacts\/lint\/report\.json/)
+  assert.match(workflow, /evidence\.mjs verify-bundle/)
 })
 
 test('redacts structured secrets and identifying URL or path data', () => {
