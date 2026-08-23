@@ -52,12 +52,24 @@ test('isolates external regression behind a protected manual Environment', () =>
   assert.doesNotMatch(regression.source, /APIFOX_ACCESS_TOKEN repository secret/i)
 })
 
-test('skips optional PushPlus notifications when the secret is absent', () => {
-  const steps = release.value.jobs.Windows.steps
-  const configuration = steps.find((step) => step.id === 'notification')
-  const notification = steps.find((step) => step.name === 'Send WeChat Notification')
-  assert.ok(configuration)
-  assert.match(configuration.run, /configured=false/)
-  assert.match(configuration.run, /notification skipped/)
-  assert.equal(notification.if, "always() && steps.notification.outputs.configured == 'true'")
+test('keeps release candidates read-only, main-only, and non-publishing', () => {
+  assert.deepEqual(release.value.permissions, { contents: 'read' })
+  const input = release.value.on.workflow_dispatch.inputs.configuration_only
+  assert.equal(input.default, true)
+  assert.equal(input.type, 'boolean')
+
+  const configuration = release.value.jobs['notification-configuration']
+  const candidate = release.value.jobs['windows-candidate']
+  assert.equal(candidate.needs, 'notification-configuration')
+  assert.equal(candidate.if, "github.ref == 'refs/heads/main' && inputs.configuration_only == false")
+  const checkout = candidate.steps.find((step) => step.uses === 'actions/checkout@v4')
+  assert.equal(checkout.with['persist-credentials'], false)
+  assert.match(release.source, /pnpm install --frozen-lockfile --ignore-scripts/)
+  assert.doesNotMatch(release.source, /pnpm publish:|GITHUB_TOKEN|contents: write/)
+
+  const notificationCheck = configuration.steps.find((step) => step.id === 'notification')
+  const notification = candidate.steps.find((step) => step.name === 'Send optional PushPlus notification')
+  assert.match(notificationCheck.run, /configured=false/)
+  assert.match(notificationCheck.run, /notification skipped/)
+  assert.equal(notification.if, "always() && needs.notification-configuration.outputs.configured == 'true'")
 })

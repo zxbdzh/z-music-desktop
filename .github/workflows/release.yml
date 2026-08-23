@@ -1,181 +1,104 @@
-name: Build
+name: Build Candidate
 
 on:
   workflow_dispatch:
+    inputs:
+      configuration_only:
+        description: Validate optional notification configuration without building
+        required: true
+        default: true
+        type: boolean
 
-# 必须声明权限，否则无法发布 Release
 permissions:
-  contents: write
+  contents: read
 
 env:
   IS_CI: 'true'
 
 jobs:
-  Windows:
-    name: Windows
-    runs-on: windows-latest
+  notification-configuration:
+    name: Optional notification configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      configured: ${{ steps.notification.outputs.configured }}
     steps:
-      - name: Check out git repository
-        uses: actions/checkout@v4
-
-      - name: Get npm cache directory
-        shell: pwsh
-        run: echo "NPM_CACHE=$(npm config get cache)" >> $env:GITHUB_ENV
-
-      - name: Show Env
-        run: echo "${{ env.NPM_CACHE }}"
-
-      - name: Setup Node Env
-        env:
-          NPM_CACHE: ${{ env.NPM_CACHE }}
-        uses: ./.github/actions/setup
-
-      - name: Build src code
-        run: |
-          git status --porcelain
-          pnpm run build
-
-      - name: Release package
-        run: |
-          pnpm run publish:win:7z:x64
-          pnpm run publish:win:7z:arm64
-          pnpm run publish:win:setup:arm64
-          pnpm run publish:win:setup:x64
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate file MD5
-        run: |
-          cd build
-          Get-FileHash *.exe,*.7z -Algorithm MD5 | Format-List
-      - name: Check notification configuration
-        if: always()
+      - name: Check PushPlus configuration
         id: notification
+        shell: bash
+        env:
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+        run: |
+          if [[ -z "$PUSHPLUS_TOKEN" ]]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::PushPlus notification skipped because PUSHPLUS_TOKEN is not configured."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  windows-candidate:
+    name: Windows unsigned candidate
+    needs: notification-configuration
+    if: github.ref == 'refs/heads/main' && inputs.configuration_only == false
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out main candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Install dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify lockfile is unchanged
+        run: git diff --exit-code -- pnpm-lock.yaml
+
+      - name: Build desktop source
+        run: pnpm build
+
+      - name: Package unsigned Windows x64 candidate
+        run: |
+          pnpm pack:win:setup:x64
+          pnpm pack:win:7z:x64
+
+      - name: Write SHA-256
+        shell: pwsh
+        run: Get-FileHash build/*.exe,build/*.7z -Algorithm SHA256 | Format-List | Out-File build/SHA256SUMS.txt
+
+      - name: Upload unsigned candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: z-music-desktop-windows-unsigned-candidate
+          path: |
+            build/*-x64-Setup.exe
+            build/*win_x64-green.7z
+            build/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Send optional PushPlus notification
+        if: always() && needs.notification-configuration.outputs.configured == 'true'
         shell: pwsh
         env:
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:PUSHPLUS_TOKEN)) {
-            "configured=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            Write-Output "::notice::PushPlus notification skipped because PUSHPLUS_TOKEN is not configured."
-          } else {
-            "configured=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          }
-
-      - name: Send WeChat Notification
-        if: always() && steps.notification.outputs.configured == 'true'
-        shell: pwsh
-        env:
-          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-        run: |
-          $packageJson = Get-Content package.json | ConvertFrom-Json
-          $version = $packageJson.version
-          $repo = "${{ github.repository }}"
-          $runId = "${{ github.run_id }}"
-          $draftUrl = "https://github.com/$repo/releases"
-          $buildUrl = "${{ github.server_url }}/$repo/actions/runs/$runId"
-          $status = if ("${{ job.status }}" -eq "success") { "🎉 打包成功" } else { "❌ 打包失败" }
-
-          # 使用普通字符串拼接，避免 Here-String 的顶格缩进问题
-          $richContent = "## $status`n`n"
-          $richContent += "**📦 版本号：** ``$version`` `n"
-          # 强制转换为 中国标准时间 (UTC+8 上海)
-          $shanghaiTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId(
-          [DateTime]::UtcNow,
-          'China Standard Time'
-          )
-          # 拼接到你的富文本
-          $richContent += "**⏰ 时间：** $($shanghaiTime.ToString('yyyy-MM-dd HH:mm:ss')) `n`n"
-          $richContent += "---`n`n"
-          $richContent += "### 🔗 快速链接`n"
-          $richContent += "- **[查看/发布草稿]($draftUrl)**`n"
-          $richContent += "- **[查看构建日志]($buildUrl)**"
-
           $body = @{
-            token    = $env:PUSHPLUS_TOKEN
-            title    = "z-music-desktop 构建通知 - $version"
-            content  = $richContent
+            token = $env:PUSHPLUS_TOKEN
+            title = "z-music-desktop candidate build"
+            content = "Candidate build status: ${{ job.status }}"
             template = "markdown"
           } | ConvertTo-Json -Compress
-
           Invoke-RestMethod -Uri "https://www.pushplus.plus/send" -Method Post -ContentType "application/json" -Body $body
-
-#  Mac:
-#    name: Mac
-#    runs-on: macos-latest
-#    steps:
-#      - name: Check out git repository
-#        uses: actions/checkout@v4
-#
-#      - name: Install python3 setuptools
-#        run: brew install python-setuptools
-#
-#      - name: Get npm cache directory
-#        shell: bash
-#        run: echo "NPM_CACHE=$(npm config get cache)" >> $GITHUB_ENV
-#
-#      - name: Show Env
-#        run: echo "${{ env.NPM_CACHE }}"
-#      - name: Setup Node Env
-#        env:
-#          NPM_CACHE: ${{ env.NPM_CACHE }}
-#        uses: ./.github/actions/setup
-#
-#      - name: Build src code
-#        run: |
-#          git status --porcelain
-#          pnpm run build
-#
-#      - name: Release package
-#        run: |
-#          pnpm run publish:mac:dmg
-#          pnpm run publish:mac:dmg:arm64
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#
-#      - name: Generate file MD5
-#        run: |
-#          cd build
-#          md5 *.dmg
-#
-#  Linux:
-#    name: Linux
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Install package
-#        run: sudo apt-get update && sudo apt-get install -y rpm libarchive-tools
-#
-#      - name: Check out git repository
-#        uses: actions/checkout@v4
-#
-#      - name: Get npm cache directory
-#        shell: bash
-#        run: echo "NPM_CACHE=$(npm config get cache)" >> $GITHUB_ENV
-#
-#      - name: Show Env
-#        run: echo "${{ env.NPM_CACHE }}"
-#      - name: Setup Node Env
-#        env:
-#          NPM_CACHE: ${{ env.NPM_CACHE }}
-#        uses: ./.github/actions/setup
-#
-#      - name: Build src code
-#        run: |
-#          git status --porcelain
-#          pnpm run build
-#
-#      - name: Release package
-#        run: |
-#          pnpm run publish:linux:deb:amd64
-#          pnpm run publish:linux:deb:arm64
-#          pnpm run publish:linux:deb:armv7l
-#          pnpm run publish:linux:appImage
-#          pnpm run publish:linux:rpm
-#          pnpm run publish:linux:pacman
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#
-#      - name: Generate file MD5
-#        run: |
-#          cd build
-#          md5sum *.deb *.rpm *.pacman *.AppImage

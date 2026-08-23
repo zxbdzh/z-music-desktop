@@ -23,9 +23,12 @@ is required in that state, and a manual run emits a skip notice. Before setting 
 variable to `true`, the owner must add `APIFOX_ACCESS_TOKEN` only as an Environment
 Secret. Repository/organization copies are not permitted.
 
-`PUSHPLUS_TOKEN` is optional. Release notification configuration runs under
-`if: always()` and emits only `configured=true|false`; the HTTP notification step
-runs only when configured.
+`PUSHPLUS_TOKEN` is optional. The tracked candidate workflow is read-only, restricted
+to `main`, and has no GitHub Release publishing step. The repository workflow remains
+`disabled_manually` during M0; a later release milestone may enable it only after
+moving release credentials into a protected, main-only release Environment. Its
+default `configuration_only=true` path can then audit notification configuration
+without checking out or executing candidate code.
 
 Run the tracked governance contract with:
 
