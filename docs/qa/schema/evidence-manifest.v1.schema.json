@@ -59,7 +59,10 @@
       "allOf": [
         {
           "if": { "properties": { "storage": { "const": "ci-artifact" } } },
-          "then": { "required": ["artifactName"] },
+          "then": {
+            "properties": { "artifactName": true },
+            "required": ["artifactName"]
+          },
           "else": { "not": { "required": ["artifactName"] } }
         }
       ]
@@ -117,7 +120,55 @@
           "items": { "$ref": "#/$defs/artifact" }
         },
         "result": { "enum": ["PASS", "FAIL"] }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "type": "object",
+                "properties": { "platform": { "const": "electron" } },
+                "required": ["platform"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "operationPath": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": { "tool": { "const": "agent-browser" } }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "target": {
+                "type": "object",
+                "properties": { "platform": { "const": "android" } },
+                "required": ["platform"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "operationPath": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tool": { "enum": ["adb", "android-emulator", "android-device"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

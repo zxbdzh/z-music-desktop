@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "executable-product-evidence",
+  "commit": "__CURRENT_COMMIT__",
+  "generatedAt": "__GENERATED_AT__",
+  "fixtureCatalog": {
+    "version": "1.0",
+    "path": "docs/qa/fixtures/catalog.v1.json"
+  },
+  "matrix": [
+    {
+      "id": "repository-ready-electron-library-success",
+      "issue": 8,
+      "state": "success",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1114,
+          "height": 718
+        },
+        "orientation": "landscape",
+        "theme": "light",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP endpoint"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "Home navigation and primary controls"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "click",
+          "target": "Music Library navigation link"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "Music Library heading, filters, and list controls"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/repository-ready-smoke.txt",
+          "sha256": "__SHA256__"
+        },
+        {
+          "type": "log",
+          "storage": "ci-artifact",
+          "path": "report.json",
+          "artifactName": "lint-quality-report",
+          "sha256": "__SHA256__"
+        }
+      ],
+      "result": "PASS"
+    }
+  ]
+}

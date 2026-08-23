@@ -23,6 +23,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Install pnpm
@@ -60,6 +61,54 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Validate QA fixtures and evidence tooling
+        run: pnpm qa:evidence
+
+      - name: Render and validate Repository Ready evidence
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          generated_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          node scripts/qa/evidence.mjs render \
+            docs/qa/evidence/repository-ready.template.json \
+            .artifacts/evidence/repository-ready.manifest.json \
+            --commit "$CANDIDATE_SHA" \
+            --generated-at "$generated_at" \
+            --artifact-root lint-quality-report=.artifacts/lint
+          node scripts/qa/evidence.mjs validate \
+            .artifacts/evidence/repository-ready.manifest.json \
+            --artifact-root lint-quality-report=.artifacts/lint
+          mkdir -p \
+            .artifacts/evidence/docs/qa/schema \
+            .artifacts/evidence/docs/qa/fixtures \
+            .artifacts/evidence/docs/qa/evidence \
+            .artifacts/evidence/artifacts/lint-quality-report
+          cp docs/qa/schema/evidence-manifest.v1.schema.json \
+            .artifacts/evidence/docs/qa/schema/evidence-manifest.v1.schema.json
+          cp -R docs/qa/fixtures/. \
+            .artifacts/evidence/docs/qa/fixtures/
+          cp docs/qa/evidence/repository-ready-smoke.txt \
+            .artifacts/evidence/docs/qa/evidence/repository-ready-smoke.txt
+          cp .artifacts/lint/report.json \
+            .artifacts/evidence/artifacts/lint-quality-report/report.json
+          (
+            cd .artifacts/evidence
+            sha256sum repository-ready.manifest.json > \
+              repository-ready.manifest.json.sha256
+          )
+          node scripts/qa/evidence.mjs verify-bundle \
+            .artifacts/evidence \
+            --commit "$CANDIDATE_SHA"
+
+      - name: Upload Repository Ready evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-ready-evidence
+          path: .artifacts/evidence/**
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Test
         run: pnpm test:run
 
@@ -75,6 +124,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
 
       - name: Install pnpm

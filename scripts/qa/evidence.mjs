@@ -1,9 +1,11 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { isIP } from 'node:net'
-import { isAbsolute, resolve, relative, sep } from 'node:path'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import Ajv2020 from 'ajv/dist/2020.js'
+import addFormats from 'ajv-formats'
 
 export const evidenceStates = Object.freeze([
   'loading',
@@ -27,6 +29,9 @@ const sensitiveTextPatterns = [
 const sensitiveAssignmentPattern = /\b(?:authorization|proxy-authorization|cookie|set-cookie|password|passphrase|token|access[_-]?token|refresh[_-]?token|session|secret|api[_-]?key|client[_-]?secret|credential(?:s)?)\b["']?\s*[:=]\s*["']?[^\s,;}\]]+/gi
 const urlPattern = /\b(?:https?|file):\/\/[^\s"'<>]+/gi
 const artifactPathPattern = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/
+const templateCommit = '__CURRENT_COMMIT__'
+const templateGeneratedAt = '__GENERATED_AT__'
+const templateSha256 = '__SHA256__'
 
 export class EvidenceValidationError extends Error {
   constructor (errors) {
@@ -73,9 +78,7 @@ function isPublicIpv6 (address) {
   const words = ipv6Words(address)
   if (!words) return false
   const [first, second] = words
-  if (words.slice(0, 5).every(word => word === 0) && words[5] === 0xffff) {
-    return false
-  }
+  if (words.slice(0, 5).every(word => word === 0) && words[5] === 0xffff) return false
   if ((first & 0xe000) !== 0x2000) return false
   if (first === 0x2001 && (second & 0xfe00) === 0) return false
   if (first === 0x2001 && second === 0x0db8) return false
@@ -110,9 +113,7 @@ export function redactText (value) {
     if (match.toLowerCase().startsWith('file://')) return '<redacted-file-uri>'
     try {
       const url = new URL(match)
-      if (url.username || url.password || !publicUrl(`${url.origin}${url.pathname}`)) {
-        return '<redacted-url>'
-      }
+      if (url.username || url.password || !publicUrl(`${url.origin}${url.pathname}`)) return '<redacted-url>'
       return `${url.origin}${url.pathname}`
     } catch {
       return '<redacted-url>'
@@ -177,21 +178,41 @@ function insideRoot (root, candidate) {
   return rel === '' || (!rel.startsWith(`..${sep}`) && rel !== '..' && !isAbsolute(rel))
 }
 
-function resolveRepoPath (root, path, errors, location) {
-  if (typeof path !== 'string' || path === '' || path.includes('\\')) {
+function resolveSafePath (root, value, errors, location) {
+  if (typeof value !== 'string' || value === '' || value.includes('\\')) {
     errors.push(`${location} must be a non-empty repository-relative POSIX path`)
     return null
   }
-  if (path.split('/').some(segment => segment === '.' || segment === '..')) {
+  if (value.split('/').some(segment => segment === '.' || segment === '..')) {
     errors.push(`${location} must not contain dot path segments`)
     return null
   }
-  const candidate = resolve(root, path)
+  const candidate = resolve(root, value)
   if (!insideRoot(root, candidate)) {
-    errors.push(`${location} escapes the repository root`)
+    errors.push(`${location} escapes its allowed root`)
     return null
   }
   return candidate
+}
+
+function validateRegularArtifactPath (allowedRoot, artifactPath, errors, location) {
+  try {
+    const stats = lstatSync(artifactPath)
+    if (!stats.isFile() || stats.isSymbolicLink()) {
+      errors.push(`${location} must be a regular non-symlink file`)
+      return false
+    }
+    const realRoot = realpathSync(allowedRoot)
+    const realArtifact = realpathSync(artifactPath)
+    if (!insideRoot(realRoot, realArtifact)) {
+      errors.push(`${location} resolves outside its allowed root`)
+      return false
+    }
+    return true
+  } catch (error) {
+    errors.push(`${location} cannot be inspected: ${error.message}`)
+    return false
+  }
 }
 
 function exactKeys (value, allowed, required, location, errors) {
@@ -228,9 +249,7 @@ function validateTarget (target, location, errors) {
     exactKeys(target, ['platform', 'deviceType', 'device', 'apiLevel'], ['platform', 'deviceType', 'device', 'apiLevel'], location, errors)
     if (!['emulator', 'physical'].includes(target.deviceType)) errors.push(`${location}.deviceType is unknown`)
     if (typeof target.device !== 'string' || target.device.trim() === '') errors.push(`${location}.device is required`)
-    if (!androidAcceptanceApiLevels.includes(target.apiLevel)) {
-      errors.push(`${location}.apiLevel must be one of ${androidAcceptanceApiLevels.join(', ')}`)
-    }
+    if (!androidAcceptanceApiLevels.includes(target.apiLevel)) errors.push(`${location}.apiLevel must be one of ${androidAcceptanceApiLevels.join(', ')}`)
   } else {
     errors.push(`${location}.platform is unknown`)
   }
@@ -248,12 +267,19 @@ function validateOperationPath (actions, platform, location, errors) {
       if (typeof action[key] !== 'string' || action[key].trim() === '') errors.push(`${actionLocation}.${key} is required`)
     }
   })
-  if (platform === 'electron' && actions.some(action => action?.tool !== 'orca-computer-use')) {
-    errors.push(`${location} must use orca-computer-use for every Electron action`)
+  if (platform === 'electron' && actions.some(action => action?.tool !== 'agent-browser')) {
+    errors.push(`${location} must use agent-browser for every Electron action`)
+  }
+  if (platform === 'android' && actions.some(action => !['adb', 'android-emulator', 'android-device'].includes(action?.tool))) {
+    errors.push(`${location} must use Android device or emulator tooling`)
   }
 }
 
-function validateArtifacts (artifacts, root, location, errors) {
+function normalizeArtifactRoots (artifactRoots = {}) {
+  return Object.fromEntries(Object.entries(artifactRoots).map(([name, value]) => [name, resolve(value)]))
+}
+
+function validateArtifacts (artifacts, root, artifactRoots, location, errors) {
   if (!Array.isArray(artifacts) || artifacts.length === 0) {
     errors.push(`${location} must contain at least one artifact`)
     return
@@ -265,27 +291,38 @@ function validateArtifacts (artifacts, root, location, errors) {
     if (!['checked-in', 'ci-artifact'].includes(artifact.storage)) errors.push(`${artifactLocation}.storage is unknown`)
     const validDigest = /^[0-9a-f]{64}$/.test(artifact.sha256 || '')
     if (!validDigest) errors.push(`${artifactLocation}.sha256 must be lowercase SHA-256`)
-    if (typeof artifact.path !== 'string' || !artifactPathPattern.test(artifact.path)) {
-      errors.push(`${artifactLocation}.path does not match the manifest schema`)
-    }
-    const artifactPath = resolveRepoPath(root, artifact.path, errors, `${artifactLocation}.path`)
+    if (typeof artifact.path !== 'string' || !artifactPathPattern.test(artifact.path)) errors.push(`${artifactLocation}.path does not match the manifest schema`)
+
+    let artifactPath = null
     if (artifact.storage === 'checked-in') {
       if (!artifact.path?.startsWith('docs/qa/evidence/')) errors.push(`${artifactLocation}.path must be below docs/qa/evidence/`)
-      if (artifactPath && !existsSync(artifactPath)) {
-        errors.push(`${artifactLocation}.path does not exist`)
-      } else if (artifactPath) {
-        const contents = readFileSync(artifactPath)
-        if (validDigest && sha256(contents, artifact.type === 'log') !== artifact.sha256) {
-          errors.push(`${artifactLocation}.sha256 does not match the checked-in artifact`)
-        }
-        if (artifact.type === 'log') {
-          errors.push(...collectSensitiveData(contents.toString('utf8'), `${artifactLocation}.checked-in log`))
-        }
-      }
+      artifactPath = resolveSafePath(root, artifact.path, errors, `${artifactLocation}.path`)
       if ('artifactName' in artifact) errors.push(`${artifactLocation}.artifactName is only valid for CI artifacts`)
+    } else {
+      if (!/^[a-z0-9][a-z0-9._-]{2,127}$/.test(artifact.artifactName || '')) {
+        errors.push(`${artifactLocation}.artifactName must be a stable lowercase name`)
+      }
+      const artifactRoot = artifactRoots[artifact.artifactName]
+      if (!artifactRoot) {
+        errors.push(`${artifactLocation}.artifactName has no supplied artifact root`)
+      } else {
+        artifactPath = resolveSafePath(artifactRoot, artifact.path, errors, `${artifactLocation}.path`)
+      }
     }
-    if (artifact.storage === 'ci-artifact' && !/^[a-z0-9][a-z0-9._-]{2,127}$/.test(artifact.artifactName || '')) {
-      errors.push(`${artifactLocation}.artifactName must be a stable lowercase name`)
+
+    if (!artifactPath) return
+    if (!existsSync(artifactPath)) {
+      errors.push(`${artifactLocation}.path does not exist`)
+      return
+    }
+    const allowedRoot = artifact.storage === 'checked-in' ? root : artifactRoots[artifact.artifactName]
+    if (!validateRegularArtifactPath(allowedRoot, artifactPath, errors, `${artifactLocation}.path`)) return
+    const contents = readFileSync(artifactPath)
+    if (validDigest && sha256(contents, artifact.type === 'log') !== artifact.sha256) {
+      errors.push(`${artifactLocation}.sha256 does not match the ${artifact.storage === 'checked-in' ? 'checked-in' : 'CI'} artifact`)
+    }
+    if (artifact.type === 'log') {
+      errors.push(...collectSensitiveData(contents.toString('utf8'), `${artifactLocation}.${artifact.storage === 'checked-in' ? 'checked-in log' : 'CI log'}`))
     }
   })
 }
@@ -306,9 +343,31 @@ function isRfc3339DateTime (value) {
   return true
 }
 
+export function validateEvidenceSchema (manifest, options = {}) {
+  const root = resolve(options.root || process.cwd())
+  const schemaPath = resolve(root, 'docs/qa/schema/evidence-manifest.v1.schema.json')
+  const errors = []
+  if (!validateRegularArtifactPath(root, schemaPath, errors, '$.schema')) {
+    throw new EvidenceValidationError(errors)
+  }
+  const ajv = new Ajv2020({ allErrors: true, strict: true })
+  addFormats(ajv)
+  const validate = ajv.compile(JSON.parse(readFileSync(schemaPath, 'utf8')))
+  if (!validate(manifest)) {
+    throw new EvidenceValidationError(validate.errors.map(error => `${error.instancePath || '$'} ${error.message}`))
+  }
+  return true
+}
+
 export function validateEvidenceManifest (manifest, options = {}) {
   const root = resolve(options.root || process.cwd())
+  const artifactRoots = normalizeArtifactRoots(options.artifactRoots)
   const errors = collectSensitiveData(manifest)
+  try {
+    validateEvidenceSchema(manifest, { root })
+  } catch (error) {
+    errors.push(...(error.errors || [error.message]))
+  }
   if (!exactKeys(manifest, ['schemaVersion', 'kind', 'commit', 'generatedAt', 'fixtureCatalog', 'matrix'], ['schemaVersion', 'kind', 'commit', 'generatedAt', 'fixtureCatalog', 'matrix'], '$', errors)) {
     throw new EvidenceValidationError(errors)
   }
@@ -317,21 +376,30 @@ export function validateEvidenceManifest (manifest, options = {}) {
   if (!/^[0-9a-f]{40}$/.test(manifest.commit || '')) errors.push('$.commit must be a full lowercase Git commit hash')
   if (options.expectedCommit && manifest.commit !== options.expectedCommit) errors.push('$.commit is stale for the expected checkout')
   if (!isRfc3339DateTime(manifest.generatedAt)) errors.push('$.generatedAt must be an RFC3339 date-time')
-  if (!exactKeys(manifest.fixtureCatalog, ['version', 'path'], ['version', 'path'], '$.fixtureCatalog', errors)) {
-    // The shape error above is sufficient.
-  } else {
+  if (isPlainObject(manifest.fixtureCatalog)) {
     if (manifest.fixtureCatalog.version !== '1.0') errors.push('$.fixtureCatalog.version must be 1.0')
     if (manifest.fixtureCatalog.path !== 'docs/qa/fixtures/catalog.v1.json') errors.push('$.fixtureCatalog.path must reference the canonical catalog')
-    const catalogPath = resolveRepoPath(root, manifest.fixtureCatalog.path, errors, '$.fixtureCatalog.path')
-    if (catalogPath && !existsSync(catalogPath)) errors.push('$.fixtureCatalog.path does not exist')
+    const catalogPath = resolveSafePath(root, manifest.fixtureCatalog.path, errors, '$.fixtureCatalog.path')
+    if (catalogPath && !existsSync(catalogPath)) {
+      errors.push('$.fixtureCatalog.path does not exist')
+    } else if (catalogPath) {
+      try {
+        const catalogErrors = []
+        if (!validateRegularArtifactPath(root, catalogPath, catalogErrors, '$.fixtureCatalog.path')) {
+          errors.push(...catalogErrors)
+        } else {
+          validateFixtureCatalog(JSON.parse(readFileSync(catalogPath, 'utf8')), { root })
+        }
+      } catch (error) {
+        errors.push(...(error.errors || [error.message]).map(message => `$.fixtureCatalog ${message}`))
+      }
+    }
   }
-  if (!Array.isArray(manifest.matrix) || manifest.matrix.length === 0) {
-    errors.push('$.matrix must contain at least one explicit matrix row')
-  } else {
+  if (Array.isArray(manifest.matrix)) {
     const ids = new Set()
     manifest.matrix.forEach((row, index) => {
       const location = `$.matrix[${index}]`
-      if (!exactKeys(row, ['id', 'issue', 'state', 'target', 'display', 'operationPath', 'artifacts', 'result'], ['id', 'issue', 'state', 'target', 'display', 'operationPath', 'artifacts', 'result'], location, errors)) return
+      if (!isPlainObject(row)) return
       if (!/^[a-z0-9][a-z0-9._-]*$/.test(row.id || '')) errors.push(`${location}.id is invalid`)
       if (ids.has(row.id)) errors.push(`${location}.id is duplicated`)
       ids.add(row.id)
@@ -340,11 +408,11 @@ export function validateEvidenceManifest (manifest, options = {}) {
       validateTarget(row.target, `${location}.target`, errors)
       validateDisplay(row.display, `${location}.display`, errors)
       validateOperationPath(row.operationPath, row.target?.platform, `${location}.operationPath`, errors)
-      validateArtifacts(row.artifacts, root, `${location}.artifacts`, errors)
+      validateArtifacts(row.artifacts, root, artifactRoots, `${location}.artifacts`, errors)
       if (!['PASS', 'FAIL'].includes(row.result)) errors.push(`${location}.result must be PASS or FAIL`)
     })
   }
-  if (errors.length > 0) throw new EvidenceValidationError(errors)
+  if (errors.length > 0) throw new EvidenceValidationError([...new Set(errors)])
   return { rows: manifest.matrix.length, commit: manifest.commit }
 }
 
@@ -374,12 +442,13 @@ export function validateFixtureCatalog (catalog, options = {}) {
       seen.add(fixture.state)
       if (!/^[0-9a-f]{64}$/.test(fixture.sha256 || '')) errors.push(`${location}.sha256 must be lowercase SHA-256`)
       if (!fixture.path?.startsWith('docs/qa/fixtures/states/')) errors.push(`${location}.path must be below docs/qa/fixtures/states/`)
-      const fixturePath = resolveRepoPath(root, fixture.path, errors, `${location}.path`)
+      const fixturePath = resolveSafePath(root, fixture.path, errors, `${location}.path`)
       if (!fixturePath || !existsSync(fixturePath)) {
         if (fixturePath) errors.push(`${location}.path does not exist`)
         return
       }
       const contents = readFileSync(fixturePath)
+      if (!validateRegularArtifactPath(root, fixturePath, errors, `${location}.path`)) return
       if (sha256(contents, true) !== fixture.sha256) errors.push(`${location}.sha256 does not match the fixture file`)
       try {
         const data = JSON.parse(contents)
@@ -396,12 +465,92 @@ export function validateFixtureCatalog (catalog, options = {}) {
   return { fixtures: catalog.fixtures.length, states: [...evidenceStates] }
 }
 
-function readJson (path) {
-  return JSON.parse(readFileSync(resolve(path), 'utf8'))
+export function verifyEvidenceBundle (bundleDir, options = {}) {
+  const bundleRoot = resolve(bundleDir)
+  if (!/^[0-9a-f]{40}$/.test(options.expectedCommit || '')) {
+    throw new Error('bundle verification requires a full expected commit hash')
+  }
+  const manifestPath = resolve(bundleRoot, 'repository-ready.manifest.json')
+  const sidecarPath = resolve(bundleRoot, 'repository-ready.manifest.json.sha256')
+  const pathErrors = []
+  if (!validateRegularArtifactPath(bundleRoot, manifestPath, pathErrors, '$.bundle.manifest')) {
+    throw new EvidenceValidationError(pathErrors)
+  }
+  if (!validateRegularArtifactPath(bundleRoot, sidecarPath, pathErrors, '$.bundle.sidecar')) {
+    throw new EvidenceValidationError(pathErrors)
+  }
+  const manifestContents = readFileSync(manifestPath)
+  const sidecar = readFileSync(sidecarPath, 'utf8').trim()
+  const recordedDigest = /^([0-9a-f]{64})(?:\s|$)/.exec(sidecar)?.[1]
+  const actualDigest = sha256(manifestContents)
+  if (recordedDigest !== actualDigest) {
+    throw new EvidenceValidationError(['$.bundle.sidecar does not match the manifest'])
+  }
+  const manifest = JSON.parse(manifestContents.toString('utf8'))
+  const result = validateEvidenceManifest(manifest, {
+    root: bundleRoot,
+    expectedCommit: options.expectedCommit,
+    artifactRoots: {
+      'lint-quality-report': resolve(bundleRoot, 'artifacts/lint-quality-report')
+    }
+  })
+  return { ...result, sha256: actualDigest }
+}
+
+export function renderEvidenceTemplate (template, options = {}) {
+  if (!/^[0-9a-f]{40}$/.test(options.commit || '')) throw new Error('render commit must be a full lowercase Git hash')
+  if (!isRfc3339DateTime(options.generatedAt)) throw new Error('render generatedAt must be RFC3339')
+  if (template.commit !== templateCommit || template.generatedAt !== templateGeneratedAt) {
+    throw new Error('template must contain the canonical commit and generatedAt placeholders')
+  }
+
+  const root = resolve(options.root || process.cwd())
+  const artifactRoots = normalizeArtifactRoots(options.artifactRoots)
+  const rendered = structuredClone(template)
+  rendered.commit = options.commit
+  rendered.generatedAt = options.generatedAt
+  for (const [rowIndex, row] of rendered.matrix.entries()) {
+    for (const [artifactIndex, artifact] of row.artifacts.entries()) {
+      const location = `$.matrix[${rowIndex}].artifacts[${artifactIndex}]`
+      if (artifact.sha256 !== templateSha256) throw new Error(`${location}.sha256 must use ${templateSha256}`)
+      const allowedRoot = artifact.storage === 'checked-in'
+        ? root
+        : artifactRoots[artifact.artifactName]
+      if (!allowedRoot) throw new Error(`${location}.artifactName has no supplied artifact root`)
+      const artifactPath = resolveSafePath(allowedRoot, artifact.path, [], `${location}.path`)
+      if (!artifactPath || !existsSync(artifactPath)) throw new Error(`${location}.path does not exist`)
+      if (!validateRegularArtifactPath(allowedRoot, artifactPath, [], `${location}.path`)) {
+        throw new Error(`${location}.path must be a regular file inside its artifact root`)
+      }
+      artifact.sha256 = sha256(readFileSync(artifactPath), artifact.type === 'log')
+    }
+  }
+  return rendered
+}
+
+function readJson (value) {
+  return JSON.parse(readFileSync(resolve(value), 'utf8'))
 }
 
 function usage () {
-  return 'Usage: node scripts/qa/evidence.mjs <validate MANIFEST [--commit HASH] | fixtures CATALOG | redact FILE>'
+  return 'Usage: node scripts/qa/evidence.mjs <validate MANIFEST [--artifact-root NAME=PATH] | render TEMPLATE OUTPUT --commit HASH --generated-at TIME | verify-bundle BUNDLE --commit HASH | fixtures CATALOG | redact FILE>'
+}
+
+function optionValue (args, name) {
+  const index = args.indexOf(name)
+  return index >= 0 ? args[index + 1] : undefined
+}
+
+function artifactRootsFromArgs (args) {
+  const roots = {}
+  args.forEach((arg, index) => {
+    if (arg !== '--artifact-root') return
+    const value = args[index + 1] || ''
+    const equals = value.indexOf('=')
+    if (equals < 1) throw new Error('--artifact-root must use NAME=PATH')
+    roots[value.slice(0, equals)] = value.slice(equals + 1)
+  })
+  return roots
 }
 
 export function resolveCurrentCommit (root = process.cwd(), run = execFileSync) {
@@ -418,12 +567,35 @@ async function main (args) {
   const [command, input, ...rest] = args
   if (!command || !input) throw new Error(usage())
   if (command === 'validate') {
-    const commitIndex = rest.indexOf('--commit')
     const expectedCommit = resolveCurrentCommit()
-    if (commitIndex >= 0 && rest[commitIndex + 1] !== expectedCommit) {
-      throw new Error('--commit must equal the current Git HEAD')
-    }
-    const result = validateEvidenceManifest(readJson(input), { expectedCommit })
+    const result = validateEvidenceManifest(readJson(input), {
+      expectedCommit,
+      artifactRoots: artifactRootsFromArgs(rest)
+    })
+    process.stdout.write(`${JSON.stringify(result)}\n`)
+    return
+  }
+  if (command === 'render') {
+    const output = rest[0]
+    if (!output) throw new Error(usage())
+    const commit = optionValue(rest, '--commit')
+    const generatedAt = optionValue(rest, '--generated-at')
+    const currentCommit = resolveCurrentCommit()
+    if (commit !== currentCommit) throw new Error('--commit must equal the current Git HEAD')
+    const manifest = renderEvidenceTemplate(readJson(input), {
+      root: process.cwd(),
+      artifactRoots: artifactRootsFromArgs(rest),
+      commit,
+      generatedAt
+    })
+    mkdirSync(dirname(resolve(output)), { recursive: true })
+    writeFileSync(resolve(output), `${JSON.stringify(manifest, null, 2)}\n`)
+    process.stdout.write(`${JSON.stringify({ output, commit })}\n`)
+    return
+  }
+  if (command === 'verify-bundle') {
+    const expectedCommit = optionValue(rest, '--commit')
+    const result = verifyEvidenceBundle(input, { expectedCommit })
     process.stdout.write(`${JSON.stringify(result)}\n`)
     return
   }
