@@ -505,7 +505,7 @@ export default {
       handleSingerRightClick,
     } = useMusicActions({ props, list, removeAllSelect, selectedList })
 
-    const { isChecking, isLiked, handleToggleLike, handleToggleLikeMultiple, handleToggleUnlikeMultiple } = useLikeMusic({ list })
+    const { isLiked, handleToggleLike, handleToggleLikeMultiple, handleToggleUnlikeMultiple } = useLikeMusic({ list })
 
     const { menus, menuLocation, isShowItemMenu, showMenu, menuClick } = useMenu({
       assertApiSupport,

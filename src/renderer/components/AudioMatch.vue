@@ -144,7 +144,7 @@
 
 <script lang="ts">
 import { ref, computed, watch, onBeforeUnmount } from '@common/utils/vueTools'
-import { startListening, stopListening, submitMatch, reset, onStateChange, getState, getAudioDevices, playRecordedAudio, playMatchResult, resetWasmModule, type AudioSource, type AudioDevice } from '@renderer/utils/audioMatch'
+import { startListening, stopListening, submitMatch, reset, onStateChange, getState, getAudioDevices, playRecordedAudio, playMatchResult, type AudioSource, type AudioDevice } from '@renderer/utils/audioMatch'
 import { isAudioMatchVisible, hideAudioMatch } from '@renderer/core/useApp/useAudioMatch'
 
 export default {

@@ -199,7 +199,7 @@
 
           <div :class="$style.episodeList">
             <article
-              v-for="(episode, index) in visibleEpisodes"
+              v-for="episode in visibleEpisodes"
               :key="episode.id"
               :class="$style.episode"
             >

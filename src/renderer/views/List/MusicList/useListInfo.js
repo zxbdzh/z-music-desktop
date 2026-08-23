@@ -1,5 +1,5 @@
 import { ref, watch, computed, onBeforeUnmount } from '@common/utils/vueTools'
-import { playMusicInfo, playInfo } from '@renderer/store/player/state'
+import { playMusicInfo } from '@renderer/store/player/state'
 import { getListMusics } from '@renderer/store/list/action'
 import { appSetting } from '@renderer/store/setting'
 

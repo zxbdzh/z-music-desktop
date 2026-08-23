@@ -18,8 +18,8 @@ electronDebug({
 app.on('ready', () => {
   global.lx.event_app.on('main_window_created', (win) => {
     installExtension(VUEJS_DEVTOOLS, { session: win.webContents.session })
-      .then((name) => {
-        console.log(`[main window] Added Extension:  ${name}`)
+      .then((extension) => {
+        console.log(`[main window] Added Extension: ${extension.name}`)
       })
       .catch((err: Error) => {
         console.log('[main window] An error occurred: ', err)
@@ -27,8 +27,8 @@ app.on('ready', () => {
   })
   global.lx.event_app.on('desktop_lyric_window_created', (win) => {
     installExtension(VUEJS_DEVTOOLS, { session: win.webContents.session })
-      .then((name) => {
-        console.log(`[lyric window] Added Extension:  ${name}`)
+      .then((extension) => {
+        console.log(`[lyric window] Added Extension: ${extension.name}`)
       })
       .catch((err: Error) => {
         console.log('[lyric window] An error occurred: ', err)

@@ -11,8 +11,7 @@ import {
   getActiveIndex,
 } from '@renderer/plugins/player'
 import { playProgress, setNowPlayTime, setMaxplayTime } from '@renderer/store/player/playProgress'
-import { crossfadeDoneMusicId } from './crossfadeState'
-import { isAfterCrossfade } from './crossfadeState'
+import { crossfadeDoneMusicId, isAfterCrossfade } from './crossfadeState'
 import { isCompleting } from './useCrossfade'
 import { musicInfo, playMusicInfo, playInfo } from '@renderer/store/player/state'
 // import { getList } from '@renderer/store/utils'

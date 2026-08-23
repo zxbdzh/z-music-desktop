@@ -66,9 +66,7 @@ export const getAudioDevices = async (): Promise<AudioDevice[]> => {
 
 import { rendererInvoke } from '@common/rendererIpc'
 import { CMMON_EVENT_NAME } from '@common/ipcNames'
-
-let generateFP: ((samples: Float32Array) => Promise<string>) | null = null
-let isWasmLoading = false
+import { createSingleFlightLoader } from './singleFlight'
 
 /**
  * 通过 IPC 获取文件内容并执行（解决 asar 打包后静态资源路径无法访问的问题）
@@ -97,7 +95,6 @@ const loadWasmModuleViaIPC = async (): Promise<(samples: Float32Array) => Promis
   // 清理可能存在的旧脚本
   document.querySelectorAll('script[data-audio-match-file]').forEach(script => script.remove())
   ;(window as any).GenerateFP = undefined
-  generateFP = null
 
   // 通过 IPC 获取文件内容
   let afpJs: string, wasmJs: string
@@ -145,38 +142,19 @@ const loadWasmModuleViaIPC = async (): Promise<(samples: Float32Array) => Promis
   }
 }
 
-const loadWasmModule = async (): Promise<(samples: Float32Array) => Promise<string>> => {
-  // 如果已经有 generateFP，直接返回复用
-  if (generateFP) return generateFP
+const wasmLoader = createSingleFlightLoader(loadWasmModuleViaIPC)
 
-  // 如果 window.GenerateFP 已存在且可用，直接使用
+const loadWasmModule = (): Promise<(samples: Float32Array) => Promise<string>> => {
   const existingGF = (window as any)?.GenerateFP
   if (typeof existingGF === 'function') {
     console.log('[AudioMatch] 复用已存在的 GenerateFP')
-    generateFP = (samples: Float32Array): Promise<string> => {
+    return Promise.resolve((samples: Float32Array): Promise<string> => {
       console.log('[AudioMatch] 调用 GenerateFP，输入采样数:', samples.length, '前10个样本:', Array.from(samples.slice(0, 10)).join(','))
       return (window as any).GenerateFP(samples)
-    }
-    return generateFP
+    })
   }
 
-  // 防止并发加载
-  if (isWasmLoading) {
-    while (isWasmLoading) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-    if (generateFP) return generateFP
-  }
-
-  isWasmLoading = true
-  try {
-    // 使用 IPC 方式加载（WASM 模块在 asar 中，需要主进程读取）
-    const wasmModule = await loadWasmModuleViaIPC()
-    generateFP = wasmModule
-    return generateFP
-  } finally {
-    isWasmLoading = false
-  }
+  return wasmLoader.get()
 }
 
 // ============ 音频采集 ============
@@ -190,7 +168,6 @@ let audioContext: AudioContext | null = null
 let mediaStream: MediaStream | null = null
 let mediaRecorder: MediaRecorder | null = null
 let recordedBlob: Blob | null = null
-let audioChunks: Float32Array[] = []
 let autoStopTimer: ReturnType<typeof setTimeout> | null = null
 let durationInterval: ReturnType<typeof setInterval> | null = null
 
@@ -335,7 +312,7 @@ const setupAudioProcessing = (stream: MediaStream): Promise<void> => {
   // 3 秒自动停止
   autoStopTimer = setTimeout(() => {
     if (state.status === 'listening') {
-      stopListening()
+      void stopListening()
     }
   }, RECORD_SECONDS * 1000)
 
@@ -471,13 +448,12 @@ export const startListening = async (source: AudioSource, deviceId: string = 'de
     // 重置回放状态
     audioBuffer = null
     recordedBlob = null
-    audioChunks = []
     // 递增 recordingId 使旧的 onstop 回调失效
     currentRecordingId++
     updateState({ status: 'listening', audioSource: source, deviceId, duration: 0, error: null, result: null })
 
     mediaStream = await startCapture(source, deviceId)
-    setupAudioProcessing(mediaStream)
+    await setupAudioProcessing(mediaStream)
   } catch (e: any) {
     console.error('[AudioMatch] startListening error:', e)
     let errorMsg = '启动失败'
@@ -493,7 +469,6 @@ export const startListening = async (source: AudioSource, deviceId: string = 'de
 export const stopListening = async (): Promise<AudioMatchResult | null> => {
   if (state.status !== 'listening') return null
 
-  const duration = state.duration
   // 等待 stopCapture 完成（包括等待 onstop 被调用）
   await stopCapture()
 
@@ -572,20 +547,19 @@ export const playRecordedAudio = async (): Promise<void> => {
 
 export const stopRecordedAudio = (): void => {
   if (!audioContext) return
-  audioContext.suspend()
+  void audioContext.suspend()
 }
 
 export const reset = () => {
-  stopCapture()
+  void stopCapture()
   audioBuffer = null
   recordedBlob = null
-  audioChunks = []
   updateState({ status: 'idle', duration: 0, error: null, result: null })
 }
 
 // 重置 WASM 模块（解决多次识别间状态污染问题）
 export const resetWasmModule = () => {
-  generateFP = null
+  wasmLoader.reset()
   // 清除可能残留的脚本
   document.querySelectorAll('script[data-audio-match-file]').forEach(s => s.remove())
   // 设置为 undefined 而不是 delete（window 属性在某些环境不可删除）
@@ -628,7 +602,6 @@ export const playMatchResult = async (result: AudioMatchResult): Promise<void> =
 
     // 转换歌曲数据格式（使用与 WyCloud 相同的方式）
     const { toRaw } = await import('@common/utils/vueTools')
-    const { markRaw, toRawDeep } = await import('@common/utils/vueTools')
     const { toNewMusicInfo } = await import('@common/utils/tools')
     const { setTempList } = await import('@renderer/store/list/action')
     const { playList } = await import('@renderer/core/player')

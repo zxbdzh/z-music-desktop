@@ -5,7 +5,6 @@ describe('crossfade guards', () => {
   // 模拟状态
   let isCompleting: boolean = false
   let crossfadeDoneMusicId: string | null = null
-  let activeIndex: 1 | 2 = 1
   let currentMusicId: string | null = null
 
   // 模拟 setProgress 的守卫逻辑
@@ -38,7 +37,6 @@ describe('crossfade guards', () => {
   beforeEach(() => {
     isCompleting = false
     crossfadeDoneMusicId = null
-    activeIndex = 1
     currentMusicId = null
   })
 

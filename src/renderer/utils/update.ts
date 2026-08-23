@@ -15,7 +15,7 @@ const address: [string, string][] = [
 
 const request = async (url: string, retryNum = 0): Promise<any> => {
   return new Promise((resolve, reject) => {
-    httpGet(
+    void httpGet(
       url,
       {
         timeout: 10000,

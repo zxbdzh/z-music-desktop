@@ -124,7 +124,7 @@ const setTagPopupWidth = () => {
   }, 50)
 }
 
-const dom_btn = (ref < HTMLElement) | (null > null)
+const dom_btn = ref(null)
 const popupVisible = ref(false)
 const handleShow = () => (popupVisible.value = !popupVisible.value)
 const handleHide = (evt) => {

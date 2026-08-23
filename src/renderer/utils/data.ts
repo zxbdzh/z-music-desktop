@@ -17,166 +17,152 @@ import { throttle } from '@common/utils'
 import { type DEFAULT_SETTING, LIST_IDS } from '@common/constants'
 import { dateFormat } from './index'
 import { setUpdateTime } from '@renderer/store/list/action'
+import { createRetryablePromiseCache } from '@common/utils/retryablePromiseCache'
 
-let listPosition: LX.List.ListPositionInfo
-let listPrevSelectId: string
-let listUpdateInfo: LX.List.ListUpdateInfo
+const listPositionCache = createRetryablePromiseCache(() => (
+  getListPositionInfoFromData().then((state) => state ?? {})
+))
+const listPrevSelectIdCache = createRetryablePromiseCache(() => (
+  getListPrevSelectIdFromData().then((id) => id ?? LIST_IDS.DEFAULT)
+))
+const listUpdateInfoCache = createRetryablePromiseCache(() => (
+  getListUpdateInfoFromData().then((state) => {
+    const value = state ?? {}
+    for (const [id, info] of Object.entries(value)) {
+      setUpdateTime(id, info.updateTime ? dateFormat(info.updateTime) : '')
+    }
+    return value
+  })
+))
+const searchSettingCache = createRetryablePromiseCache(getSearchSettingFromData)
+const songListSettingCache = createRetryablePromiseCache(getSongListSettingFromData)
+const leaderboardSettingCache = createRetryablePromiseCache(getLeaderboardSettingFromData)
 
-let searchSetting: (typeof DEFAULT_SETTING)['search']
-let songListSetting: (typeof DEFAULT_SETTING)['songList']
-let leaderboardSetting: (typeof DEFAULT_SETTING)['leaderboard']
-
-const saveListPositionThrottle = throttle(() => {
-  saveListPositionInfoFromData(listPosition)
+const saveListPositionThrottle = throttle((state: LX.List.ListPositionInfo) => {
+  saveListPositionInfoFromData(state)
 }, 1000)
-const saveSearchSettingThrottle = throttle(() => {
-  saveSearchSettingFromData(searchSetting)
+const saveSearchSettingThrottle = throttle((state: (typeof DEFAULT_SETTING)['search']) => {
+  saveSearchSettingFromData(state)
 }, 1000)
-const saveSongListSettingThrottle = throttle(() => {
-  saveSongListSettingFromData(songListSetting)
+const saveSongListSettingThrottle = throttle((state: (typeof DEFAULT_SETTING)['songList']) => {
+  saveSongListSettingFromData(state)
 }, 1000)
-const saveLeaderboardSettingThrottle = throttle(() => {
-  saveLeaderboardSettingFromData(leaderboardSetting)
+const saveLeaderboardSettingThrottle = throttle((state: (typeof DEFAULT_SETTING)['leaderboard']) => {
+  saveLeaderboardSettingFromData(state)
 }, 1000)
 const saveViewPrevStateThrottle = throttle((state) => {
   saveViewPrevStateFromData(state)
 }, 1000)
 
-const initPosition = async () => {
-  listPosition ??= (await getListPositionInfoFromData()) ?? {}
-}
+const getListPositionState = () => listPositionCache.get()
 export const getListPosition = async (id: string): Promise<number> => {
-  await initPosition()
-  return listPosition[id] ?? 0
+  const state = await getListPositionState()
+  return state[id] ?? 0
 }
 export const setListPosition = async (id: string, position?: number) => {
-  await initPosition()
-  listPosition[id] = position ?? 0
-  saveListPositionThrottle()
+  const state = await getListPositionState()
+  state[id] = position ?? 0
+  saveListPositionThrottle(state)
 }
 export const removeListPosition = async (id: string) => {
-  await initPosition()
-  if (listPosition[id] == null) return
-  delete listPosition[id]
-  saveListPositionThrottle()
+  const state = await getListPositionState()
+  if (state[id] == null) return
+  delete state[id]
+  saveListPositionThrottle(state)
 }
 export const overwriteListPosition = async (ids: string[]) => {
-  await initPosition()
+  const state = await getListPositionState()
   const removedIds = []
-  for (const id of Object.keys(listPosition)) {
+  for (const id of Object.keys(state)) {
     if (ids.includes(id)) continue
     removedIds.push(id)
   }
-  for (const id of removedIds) delete listPosition[id]
-  saveListPositionThrottle()
+  for (const id of removedIds) delete state[id]
+  saveListPositionThrottle(state)
 }
 
-const saveListPrevSelectIdThrottle = throttle(() => {
-  saveListPrevSelectIdFromData(listPrevSelectId)
+const saveListPrevSelectIdThrottle = throttle((id: string) => {
+  saveListPrevSelectIdFromData(id)
 }, 200)
-export const getListPrevSelectId = async () => {
-  listPrevSelectId ??= (await getListPrevSelectIdFromData()) ?? LIST_IDS.DEFAULT
-  return listPrevSelectId ?? LIST_IDS.DEFAULT
-}
+export const getListPrevSelectId = () => listPrevSelectIdCache.get()
 export const saveListPrevSelectId = (id: string) => {
-  listPrevSelectId = id
-  saveListPrevSelectIdThrottle()
+  listPrevSelectIdCache.set(id)
+  saveListPrevSelectIdThrottle(id)
 }
 
-const saveListUpdateInfo = throttle(() => {
-  saveListUpdateInfoFromData(listUpdateInfo)
+const saveListUpdateInfo = throttle((state: LX.List.ListUpdateInfo) => {
+  saveListUpdateInfoFromData(state)
 }, 1000)
 
-const initListUpdateInfo = async () => {
-  if (listUpdateInfo == null) {
-    listUpdateInfo = (await getListUpdateInfoFromData()) ?? {}
-    for (const [id, info] of Object.entries(listUpdateInfo)) {
-      setUpdateTime(id, info.updateTime ? dateFormat(info.updateTime) : '')
-    }
-  }
-}
-export const getListUpdateInfo = async () => {
-  await initListUpdateInfo()
-  return listUpdateInfo
-}
+const getListUpdateInfoState = () => listUpdateInfoCache.get()
+export const getListUpdateInfo = getListUpdateInfoState
 export const setListUpdateInfo = async (info: LX.List.ListUpdateInfo) => {
-  await initListUpdateInfo()
-  listUpdateInfo = info
-  saveListUpdateInfo()
+  listUpdateInfoCache.set(info)
+  saveListUpdateInfo(info)
 }
 export const setListAutoUpdate = async (id: string, enable: boolean) => {
-  await initListUpdateInfo()
-  const targetInfo = listUpdateInfo[id] ?? { updateTime: 0, isAutoUpdate: false }
+  const state = await getListUpdateInfoState()
+  const targetInfo = state[id] ?? { updateTime: 0, isAutoUpdate: false }
   targetInfo.isAutoUpdate = enable
-  listUpdateInfo[id] = targetInfo
-  saveListUpdateInfo()
+  state[id] = targetInfo
+  saveListUpdateInfo(state)
 }
 export const setListUpdateTime = async (id: string, time: number) => {
-  await initListUpdateInfo()
-  const targetInfo = listUpdateInfo[id] ?? { updateTime: 0, isAutoUpdate: false }
+  const state = await getListUpdateInfoState()
+  const targetInfo = state[id] ?? { updateTime: 0, isAutoUpdate: false }
   targetInfo.updateTime = time
-  listUpdateInfo[id] = targetInfo
-  saveListUpdateInfo()
+  state[id] = targetInfo
+  saveListUpdateInfo(state)
 }
-// export const setListUpdateInfo = (id, { updateTime, isAutoUpdate }) => {
-//   listUpdateInfo[id] = { updateTime, isAutoUpdate }
-//   saveListUpdateInfo()
-// }
 export const removeListUpdateInfo = async (id: string) => {
-  await initListUpdateInfo()
-  if (listUpdateInfo[id] == null) return
-  delete listUpdateInfo[id]
-  saveListUpdateInfo()
+  const state = await getListUpdateInfoState()
+  if (state[id] == null) return
+  delete state[id]
+  saveListUpdateInfo(state)
 }
 export const overwriteListUpdateInfo = async (ids: string[]) => {
-  await initListUpdateInfo()
+  const state = await getListUpdateInfoState()
   const removedIds = []
-  for (const id of Object.keys(listUpdateInfo)) {
+  for (const id of Object.keys(state)) {
     if (ids.includes(id)) continue
     removedIds.push(id)
   }
-  for (const id of removedIds) delete listUpdateInfo[id]
-  saveListUpdateInfo()
+  for (const id of removedIds) delete state[id]
+  saveListUpdateInfo(state)
 }
 
-export const getSearchSetting = async () => {
-  searchSetting ??= await getSearchSettingFromData()
-  return { ...searchSetting }
-}
+const getSearchSettingState = () => searchSettingCache.get()
+export const getSearchSetting = async () => ({ ...await getSearchSettingState() })
 export const setSearchSetting = async (setting: Partial<(typeof DEFAULT_SETTING)['search']>) => {
-  if (!searchSetting) await getSearchSetting()
+  const state = await getSearchSettingState()
   let requiredSave = false
-  if (setting.source && searchSetting.source != setting.source) requiredSave = true
-  if (setting.type && searchSetting.type != setting.type) requiredSave = true
-  if (setting.temp_source && searchSetting.temp_source != setting.temp_source) requiredSave = true
+  if (setting.source && state.source != setting.source) requiredSave = true
+  if (setting.type && state.type != setting.type) requiredSave = true
+  if (setting.temp_source && state.temp_source != setting.temp_source) requiredSave = true
 
   if (!requiredSave) return
-  searchSetting = Object.assign(searchSetting, setting)
-  saveSearchSettingThrottle()
+  Object.assign(state, setting)
+  saveSearchSettingThrottle(state)
 }
 
-export const getSongListSetting = async () => {
-  songListSetting ??= await getSongListSettingFromData()
-  return { ...songListSetting }
-}
+const getSongListSettingState = () => songListSettingCache.get()
+export const getSongListSetting = async () => ({ ...await getSongListSettingState() })
 export const setSongListSetting = async (
   setting: Partial<(typeof DEFAULT_SETTING)['songList']>
 ) => {
-  if (!songListSetting) await getSongListSetting()
-  songListSetting = Object.assign(songListSetting, setting)
-  saveSongListSettingThrottle()
+  const state = await getSongListSettingState()
+  Object.assign(state, setting)
+  saveSongListSettingThrottle(state)
 }
 
-export const getLeaderboardSetting = async () => {
-  leaderboardSetting ??= await getLeaderboardSettingFromData()
-  return { ...leaderboardSetting }
-}
+const getLeaderboardSettingState = () => leaderboardSettingCache.get()
+export const getLeaderboardSetting = async () => ({ ...await getLeaderboardSettingState() })
 export const setLeaderboardSetting = async (
   setting: Partial<(typeof DEFAULT_SETTING)['leaderboard']>
 ) => {
-  if (!leaderboardSetting) await getLeaderboardSetting()
-  leaderboardSetting = Object.assign(leaderboardSetting, setting)
-  saveLeaderboardSettingThrottle()
+  const state = await getLeaderboardSettingState()
+  Object.assign(state, setting)
+  saveLeaderboardSettingThrottle(state)
 }
 
 export const saveViewPrevState = (state: (typeof DEFAULT_SETTING)['viewPrevState']) => {

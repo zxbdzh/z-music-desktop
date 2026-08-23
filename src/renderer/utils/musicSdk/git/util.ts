@@ -3,48 +3,54 @@ import { toMD5 } from '../utils'
 import { httpFetch } from '../../request'
 import { formatPlayTime } from '@common/utils'
 
-// 音乐数据库缓存
-let musicDatabase: any[] | null = null
-let lastFetchTime: number = 0
-const CACHE_DURATION: number = 3600000 // 1小时缓存
+const databaseCache: {
+  data: any[] | null
+  fetchedAt: number
+  pending: Promise<any[]> | null
+} = {
+  data: null,
+  fetchedAt: 0,
+  pending: null,
+}
+const CACHE_DURATION = 3600000 // 1小时缓存
 
 // Gitcode配置
-export const GITCODE_CONFIG: { owner: string; repo: string; token: string; dbUrl: string | null } = {
+export const GITCODE_CONFIG: { owner: string; repo: string; dbUrl: string } = {
   owner: 'ikun_0014', // Gitcode用户名
   repo: 'music', // 仓库名
-  token: 'WzsER9knWNgC_4tjeJCtHKcN', // 访问令牌
-  dbUrl: null, // 数据库文件URL（将在init中设置）
+  dbUrl: 'https://api.gitcode.com/api/v5/repos/ikun_0014/music/raw/audio_database.json',
 }
-GITCODE_CONFIG.dbUrl = `https://api.gitcode.com/api/v5/repos/${GITCODE_CONFIG.owner}/${GITCODE_CONFIG.repo}/raw/audio_database.json?access_token=${GITCODE_CONFIG.token}`
 
 /**
  * 加载音乐数据库
  */
-export const loadDatabase = async (forceReload: boolean = false): Promise<any[]> => {
+export const loadDatabase = (forceReload: boolean = false): Promise<any[]> => {
   const now = Date.now()
-
-  // 检查缓存是否有效
-  if (!forceReload && musicDatabase && now - lastFetchTime < CACHE_DURATION) {
-    return musicDatabase
+  if (!forceReload && databaseCache.data && now - databaseCache.fetchedAt < CACHE_DURATION) {
+    return Promise.resolve(databaseCache.data)
   }
+  if (databaseCache.pending) return databaseCache.pending
 
-  try {
-    const requestObj = httpFetch(GITCODE_CONFIG.dbUrl!)
-    const { body } = await requestObj.promise
-
-    if (typeof body === 'string') {
-      musicDatabase = JSON.parse(body)
-    } else {
-      musicDatabase = body
+  const load = async () => {
+    try {
+      const requestObj = httpFetch(GITCODE_CONFIG.dbUrl)
+      const { body } = await requestObj.promise
+      const data = typeof body === 'string' ? JSON.parse(body) : body
+      databaseCache.data = data
+      databaseCache.fetchedAt = now
+      console.log(`成功加载 ${data.length} 首歌曲`)
+      return data
+    } catch (error) {
+      console.error('加载数据库失败:', error)
+      return []
     }
-
-    lastFetchTime = now
-    console.log(`成功加载 ${musicDatabase!.length} 首歌曲`)
-    return musicDatabase!
-  } catch (error) {
-    console.error('加载数据库失败:', error)
-    return []
   }
+  const pending = load().finally(() => {
+    if (databaseCache.pending === pending) databaseCache.pending = null
+  })
+
+  databaseCache.pending = pending
+  return pending
 }
 
 /**
@@ -211,5 +217,5 @@ export const wbdCrypto = {
  */
 export const buildDownloadUrl = (relativePath: string): string => {
   const encodedPath = encodeURIComponent(relativePath.replace(/\\/g, '/'))
-  return `https://api.gitcode.com/api/v5/repos/${GITCODE_CONFIG.owner}/${GITCODE_CONFIG.repo}/raw/${encodedPath}?access_token=${GITCODE_CONFIG.token}`
+  return `https://api.gitcode.com/api/v5/repos/${GITCODE_CONFIG.owner}/${GITCODE_CONFIG.repo}/raw/${encodedPath}`
 }

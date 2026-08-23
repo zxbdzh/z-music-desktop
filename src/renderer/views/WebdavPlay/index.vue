@@ -105,7 +105,7 @@
         </div>
         <div v-else :class="$style.songList">
           <div
-            v-for="(song, index) in filteredSongs"
+            v-for="song in filteredSongs"
             :key="song.id"
             :class="[$style.songItem, { [$style.playing]: playingId === song.id }]"
             @dblclick="play(filteredSongs, song)"

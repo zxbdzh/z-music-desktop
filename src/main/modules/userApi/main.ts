@@ -5,11 +5,15 @@ import path from 'node:path'
 import { openDevTools as handleOpenDevTools } from '@main/utils'
 import USER_API_RENDERER_EVENT_NAME from './rendererEvent/name'
 import { getScript } from './utils'
+import { createRetryablePromiseCache } from '@common/utils/retryablePromiseCache'
 
 let browserWindow: Electron.BrowserWindow | null = null
 
-let html: string | null = null
 let dir: string | null = null
+const htmlCache = createRetryablePromiseCache(() => {
+  if (!dir) throw new Error('User API renderer directory is not initialized.')
+  return fs.promises.readFile(path.join(dir, 'renderer/user-api.html'), 'utf8')
+})
 
 const denyEvents = [
   'will-navigate',
@@ -63,9 +67,7 @@ export const createWindow = async (userApi: LX.UserApi.UserApiInfo) => {
   dir ??=
     process.env.NODE_ENV !== 'production' ? webpackUserApiPath : path.join(__dirname, 'userApi')
 
-  if (!html) {
-    html = await fs.promises.readFile(path.join(dir, 'renderer/user-api.html'), 'utf8')
-  }
+  const html = await htmlCache.get()
   const preloadUrl =
     process.env.NODE_ENV !== 'production'
       ? `${path.join(__dirname, '../dist/user-api-preload.js')}`

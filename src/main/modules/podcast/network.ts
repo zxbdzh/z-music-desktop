@@ -4,6 +4,7 @@ import {
   fetch as undiciFetch,
   type Dispatcher,
 } from 'undici'
+import { createRetryablePromiseCache } from '@common/utils/retryablePromiseCache'
 
 export type PodcastResponse = Awaited<ReturnType<typeof undiciFetch>>
 type PodcastFetchOptions = Parameters<typeof undiciFetch>[1]
@@ -28,7 +29,10 @@ const PODCAST_SESSION_PARTITION = 'persist:podcast-network'
 
 let cachedProxyUrl: string | null | undefined
 let cachedDispatcher: Dispatcher | undefined
-let cachedElectronSession: PodcastElectronSession | undefined
+const podcastElectronSessionCache = createRetryablePromiseCache(async () => {
+  const { session } = await import('electron')
+  return session.fromPartition(PODCAST_SESSION_PARTITION) as unknown as PodcastElectronSession
+})
 
 export const resolvePodcastProxyUrl = (
   setting: PodcastProxySetting,
@@ -109,11 +113,8 @@ export const formatPodcastNetworkError = (error: unknown) => {
   return code ? `${message} (${code})` : message
 }
 
-async function getPodcastElectronSession() {
-  if (cachedElectronSession) return cachedElectronSession
-  const { session } = await import('electron')
-  cachedElectronSession = session.fromPartition(PODCAST_SESSION_PARTITION) as unknown as PodcastElectronSession
-  return cachedElectronSession
+function getPodcastElectronSession(): Promise<PodcastElectronSession> {
+  return podcastElectronSessionCache.get()
 }
 
 function getPodcastProxySetting(): PodcastProxySetting {

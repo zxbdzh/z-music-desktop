@@ -1,8 +1,7 @@
 import { httpFetch } from '../../request'
-import { dnsLookup } from '../utils'
+import { dnsLookup, formatSingerName } from '../utils'
 import { headers, timeout } from '../options'
 import { sizeFormate, decodeName, formatPlayTime } from '../../index'
-import { formatSingerName } from '../utils'
 
 interface QualityType {
   type: string

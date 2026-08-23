@@ -315,6 +315,8 @@ const clipByCodeUnits = (value, maxCodeUnits) => {
 
 const sanitizeFileNamePart = (value, fallback, maxCodeUnits = 120) => {
   const sanitized = String(value || fallback)
+    // Windows forbids the C0 control-character range in file names.
+    // eslint-disable-next-line no-control-regex
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
     .replace(/[. ]+$/g, '')
     .trim()

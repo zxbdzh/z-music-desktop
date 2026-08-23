@@ -41,25 +41,25 @@ const normalizePicUrl = (pic?: string): string => {
   return pic.replace(/^http:\/\//, 'https://')
 }
 
-let cookie: { b_3?: string; b_4?: string } | null = null
-async function getCookie(): Promise<{ b_3?: string; b_4?: string }> {
-  if (!cookie) {
+interface BilibiliCookie { b_3?: string; b_4?: string }
+let cookiePromise: Promise<BilibiliCookie> | null = null
+const getCookie = (): Promise<BilibiliCookie> => {
+  cookiePromise ??= (async () => {
     try {
       const requestObj = httpFetch('https://api.bilibili.com/x/frontend/finger/spi', {
         headers: { 'User-Agent': UA },
       })
       const { body } = await requestObj.promise
-      cookie = parseBody(body)?.data ?? { b_3: '', b_4: '' }
-    } catch (error) {
-      cookie = { b_3: '', b_4: '' }
+      return parseBody(body)?.data ?? { b_3: '', b_4: '' }
+    } catch {
+      return { b_3: '', b_4: '' }
     }
-  }
-  return cookie!
+  })()
+  return cookiePromise
 }
 
-function getCookieString(): string {
-  if (!cookie) return ''
-  return `buvid3=${cookie.b_3};buvid4=${cookie.b_4}`
+function getCookieString(cookie: BilibiliCookie): string {
+  return `buvid3=${cookie.b_3 ?? ''};buvid4=${cookie.b_4 ?? ''}`
 }
 
 function durationToSec(duration: any): number {
@@ -235,7 +235,7 @@ const musicSearchModule = {
     const emptyResult = { list: [], allPage: 0, total: 0, limit, source: 'bilibili' }
 
     try {
-      await getCookie()
+      const cookie = await getCookie()
 
       const url = buildUrl('https://api.bilibili.com/x/web-interface/search/type', {
         context: '',
@@ -257,7 +257,7 @@ const musicSearchModule = {
       })
 
       const requestObj = httpFetch(url, {
-        headers: { ...searchHeaders, cookie: getCookieString() },
+        headers: { ...searchHeaders, cookie: getCookieString(cookie) },
       })
       const response = await requestObj.promise
       const data = parseBody(response.body)

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const listeners = new Map<string, (...args: any[]) => void>()
 const audioInstances: FakeAudio[] = []
+let appendedNode: unknown = null
 
 vi.mock('@common/utils/vueTools', () => ({ onBeforeUnmount: vi.fn() }))
 vi.mock('@renderer/plugins/player', () => ({
@@ -49,8 +50,11 @@ describe('media session registration', () => {
   beforeEach(() => {
     listeners.clear()
     audioInstances.length = 0
+    appendedNode = null
     vi.stubGlobal('Audio', FakeAudio)
-    vi.spyOn(document.body, 'append').mockImplementation(() => undefined)
+    vi.spyOn(document.body, 'append').mockImplementation((node) => {
+      appendedNode = node
+    })
     Object.defineProperty(window, 'MediaMetadata', {
       configurable: true,
       value: class MediaMetadata {
@@ -81,24 +85,25 @@ describe('media session registration', () => {
 
     useMediaSessionInfo()
     expect(audioInstances).toHaveLength(1)
-    expect(audioInstances[0].play).toHaveBeenCalledTimes(1)
-    expect(audioInstances[0].loop).toBe(true)
-    expect(audioInstances[0].hidden).toBe(true)
-    expect(document.body.append).toHaveBeenCalledWith(audioInstances[0])
-    expect(audioInstances[0].pause).not.toHaveBeenCalled()
+    const registrationAudio = audioInstances[0]
+    expect(registrationAudio.play).toHaveBeenCalledTimes(1)
+    expect(registrationAudio.loop).toBe(true)
+    expect(registrationAudio.hidden).toBe(true)
+    expect(appendedNode).toBe(registrationAudio)
+    expect(registrationAudio.pause).not.toHaveBeenCalled()
 
     listeners.get('mediaSessionActivate')?.()
     await Promise.resolve()
 
-    expect(audioInstances[0].play).toHaveBeenCalledTimes(2)
+    expect(registrationAudio.play).toHaveBeenCalledTimes(2)
 
     listeners.get('play')?.()
     await Promise.resolve()
     expect(navigator.mediaSession.playbackState).toBe('playing')
-    expect(audioInstances[0].pause).not.toHaveBeenCalled()
+    expect(registrationAudio.pause).not.toHaveBeenCalled()
 
     listeners.get('pause')?.()
-    expect(audioInstances[0].pause).toHaveBeenCalledTimes(1)
+    expect(registrationAudio.pause).toHaveBeenCalledTimes(1)
     expect(navigator.mediaSession.playbackState).toBe('paused')
   })
 })

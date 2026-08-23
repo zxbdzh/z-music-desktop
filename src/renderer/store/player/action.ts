@@ -15,7 +15,6 @@ import {
 } from './state'
 import { getListMusicsFromCache } from '@renderer/store/list/action'
 import { downloadList } from '@renderer/store/download/state'
-import { setProgress } from './playProgress'
 import { playNext } from '@renderer/core/player'
 import { LIST_IDS } from '@common/constants'
 import { toRaw } from '@common/utils/vueTools'

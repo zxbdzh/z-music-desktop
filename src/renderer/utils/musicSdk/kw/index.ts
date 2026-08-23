@@ -78,7 +78,7 @@ const kw = {
     musicInfo.types.forEach((type: any) => {
       tasks.push(kw.getMusicUrl(songId, type.type).promise)
     })
-    Promise.all(tasks).then((urlInfo: any[]) => {
+    void Promise.all(tasks).then((urlInfo: any[]) => {
       let typeUrl: Record<string, string> = {}
       urlInfo.forEach((info: any) => {
         typeUrl[info.type] = info.url

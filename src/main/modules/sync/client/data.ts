@@ -4,6 +4,7 @@ import { File } from '../../../../common/constants_sync'
 import { exists } from '../utils'
 
 let syncAuthKeys: Record<string, LX.Sync.ClientKeyInfo>
+let initClientInfoPromise: Promise<void> | null = null
 
 const saveSyncAuthKeys = async () => {
   const syncAuthKeysFilePath = path.join(
@@ -16,6 +17,13 @@ const saveSyncAuthKeys = async () => {
 
 export const initClientInfo = async () => {
   if (syncAuthKeys != null) return
+  initClientInfoPromise ??= loadClientInfo().finally(() => {
+    initClientInfoPromise = null
+  })
+  await initClientInfoPromise
+}
+
+const loadClientInfo = async () => {
   const syncAuthKeysFilePath = path.join(
     global.lxDataPath,
     File.clientDataPath,
@@ -34,7 +42,7 @@ export const initClientInfo = async () => {
     if (!(await exists(syncDataPath))) {
       await fs.promises.mkdir(syncDataPath, { recursive: true })
     }
-    void saveSyncAuthKeys()
+    await saveSyncAuthKeys()
   }
 }
 
