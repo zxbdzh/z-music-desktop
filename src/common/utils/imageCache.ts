@@ -69,7 +69,7 @@ export const loadImageToDataUrl = (url: string): Promise<string> => {
  * @param url 图片 URL
  */
 export const preloadImage = (url: string): void => {
-  if (url) loadImageToDataUrl(url)
+  if (url) void loadImageToDataUrl(url)
 }
 
 /**

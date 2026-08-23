@@ -24,7 +24,7 @@ const timeoutTools: {
   exit() {
     window.lx.isPlayedStop = true
     if (!appSetting['player.waitPlayEndStop'] && isPlay.value) {
-      pause()
+      void pause()
     }
   },
   clearTimeout() {

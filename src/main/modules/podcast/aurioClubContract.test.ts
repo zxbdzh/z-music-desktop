@@ -37,7 +37,7 @@ describe('AurioClubClient released endpoint contract', () => {
     const client = new AurioClubClient({
       coreBaseUrl: CORE_BASE_URL,
       edgeBaseUrl: EDGE_BASE_URL,
-      getToken: async () => 'test-token',
+      getToken: async () => 'fixture-token-value',
       fetcher: fetcher as unknown as typeof fetch,
     })
     const event: LX.Podcast.AnalyticsEvent = {
@@ -91,13 +91,13 @@ describe('AurioClubClient released endpoint contract', () => {
     await client.searchItunes('technology')
     await client.proxyText('https://feeds.example/show.xml')
     await client.sendCode('user@example.com')
-    await client.loginPassword('user@example.com', 'password-1')
+    await client.loginPassword('user@example.com', 'fixture-password-1')
     await client.loginEmail('user@example.com', '123456')
-    await client.registerPassword('user@example.com', '123456', 'password-1')
-    await client.resetPassword('user@example.com', '123456', 'password-2')
+    await client.registerPassword('user@example.com', '123456', 'fixture-password-1')
+    await client.resetPassword('user@example.com', '123456', 'fixture-password-2')
     await client.me()
     await client.updateProfile('AurioUser')
-    await client.changePassword('password-1', 'password-2')
+    await client.changePassword('fixture-password-1', 'fixture-password-2')
     await client.linkDevice('device-1', true)
     await client.track([event])
     await client.pull(12.9)
@@ -114,7 +114,7 @@ describe('AurioClubClient released endpoint contract', () => {
       request('POST', '/api/v1/auth/send-code', { email: 'user@example.com' }),
       request('POST', '/api/v1/auth/login-password', {
         email: 'user@example.com',
-        password: 'password-1',
+        password: 'fixture-password-1',
       }),
       request('POST', '/api/v1/auth/login-email', {
         email: 'user@example.com',
@@ -123,18 +123,18 @@ describe('AurioClubClient released endpoint contract', () => {
       request('POST', '/api/v1/auth/register-password', {
         email: 'user@example.com',
         code: '123456',
-        password: 'password-1',
+        password: 'fixture-password-1',
       }),
       request('POST', '/api/v1/auth/reset-password', {
         email: 'user@example.com',
         code: '123456',
-        new_password: 'password-2',
+        new_password: 'fixture-password-2',
       }),
       request('GET', '/api/v1/auth/me', undefined, CORE_BASE_URL, true),
       request('PUT', '/api/v1/auth/profile', { username: 'AurioUser' }, CORE_BASE_URL, true),
       request('POST', '/api/v1/auth/change-password', {
-        old_password: 'password-1',
-        new_password: 'password-2',
+        old_password: 'fixture-password-1',
+        new_password: 'fixture-password-2',
       }, CORE_BASE_URL, true),
       request('POST', '/api/v1/auth/link-device', {
         device_id: 'device-1',
@@ -207,7 +207,7 @@ const contractDataFor = (url: string): unknown => {
     url.endsWith('/auth/login-email') ||
     url.endsWith('/auth/register-password')
   ) {
-    return { token: 'test-token', user: aurioUser }
+    return { token: 'fixture-token-value', user: aurioUser }
   }
   if (url.endsWith('/auth/me') || url.endsWith('/auth/profile')) return { user: aurioUser }
   if (url.includes('/sync/pull')) {

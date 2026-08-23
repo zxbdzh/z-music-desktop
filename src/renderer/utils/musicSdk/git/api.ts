@@ -1,5 +1,4 @@
-import { loadDatabase } from './util'
-import { generateSongId, buildDownloadUrl } from './util'
+import { loadDatabase, generateSongId, buildDownloadUrl } from './util'
 
 /**
  * 获取音乐URL

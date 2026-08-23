@@ -79,7 +79,7 @@ const buildHttpPromose = (url: string, options: any) => {
   obj.promise = new Promise((resolve, reject) => {
     obj.cancelFn = reject
     // console.log(`\n---send request------${url}------------`)
-    fetchData(url, options.method, options, (err, resp, body) => {
+    void fetchData(url, options.method, options, (err, resp) => {
       // console.log(`\n---response------${url}------------`)
       // console.log(body)
       obj.requestObj = null
@@ -320,7 +320,7 @@ const fetchData = async (
 
 export const checkUrl = (url: string, options: any = {}): Promise<void> => {
   return new Promise((resolve, reject) => {
-    fetchData(url, 'head', options, (err: Error | null, resp?: any) => {
+    void fetchData(url, 'head', options, (err: Error | null, resp?: any) => {
       if (err) return reject(err)
       if (resp.statusCode === 200) {
         resolve()

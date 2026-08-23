@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "generated-code-lint-boundary",
+  "artifacts": [
+    {
+      "path": "src/common/utils/effects/snow.min.js",
+      "sha256": "5e8a0590dd5d726b69400e37fa8112e02d7ee4f92b251cff0ae43c3b05bff497",
+      "lintExcluded": true,
+      "textScan": true,
+      "source": {
+        "description": "JavaScript Snow Effect by Jam-Es.com (MIT header retained in file)",
+        "reference": "https://github.com/Jam-Es/JavaScript-Snow-Effect"
+      },
+      "hashMode": "lf-text"
+    },
+    {
+      "path": "src/renderer/utils/musicSdk/kg/vendors/infSign.min.js",
+      "sha256": "71dfa5552aaae2e42ea0b3d7fe6219ffbf2d5c054a2b51a4bac9b3a0475d5176",
+      "lintExcluded": true,
+      "textScan": true,
+      "source": {
+        "description": "Vendored Kugou request-signature runtime inherited from the standalone repository baseline",
+        "reference": "git:ea8d828452b0097d50c804c74df76ff9a89c5fed"
+      },
+      "hashMode": "lf-text"
+    },
+    {
+      "path": "src/static/audio_match/afp.js",
+      "sha256": "3776f3122d8a516d716ec00f55c24b919f03a2fb4bb009191007327170d33763",
+      "lintExcluded": true,
+      "textScan": true,
+      "source": {
+        "description": "NetEase audio-fingerprint Emscripten runtime",
+        "reference": "https://fn.music.163.com/g/chrome-extension-home-page-beta/"
+      },
+      "hashMode": "lf-text"
+    },
+    {
+      "path": "src/static/audio_match/afp.wasm.js",
+      "sha256": "4926a6d69527a1afbc7f7d120b9c21947e677d80c484c8b65572fa7d4ce3b99f",
+      "lintExcluded": true,
+      "textScan": true,
+      "source": {
+        "description": "NetEase audio-fingerprint WASM base64 wrapper",
+        "reference": "https://fn.music.163.com/g/chrome-extension-home-page-beta/"
+      },
+      "hashMode": "lf-text"
+    },
+    {
+      "path": "src/renderer/utils/audioMatch/afp.js",
+      "sha256": "3776f3122d8a516d716ec00f55c24b919f03a2fb4bb009191007327170d33763",
+      "lintExcluded": true,
+      "textScan": true,
+      "source": {
+        "description": "NetEase audio-fingerprint Emscripten runtime copy",
+        "reference": "https://fn.music.163.com/g/chrome-extension-home-page-beta/"
+      },
+      "hashMode": "lf-text"
+    },
+    {
+      "path": "src/renderer/utils/audioMatch/afp.wasm",
+      "sha256": "8064415bb66e45410e88877f07cd007a3ae62ebf463aac13c159a8f13e4c8fe8",
+      "lintExcluded": false,
+      "textScan": false,
+      "source": {
+        "description": "NetEase audio-fingerprint compiled WASM binary",
+        "reference": "https://fn.music.163.com/g/chrome-extension-home-page-beta/"
+      },
+      "hashMode": "binary"
+    },
+    {
+      "path": "src/renderer/utils/audioMatch/afp.wasm.js",
+      "sha256": "4926a6d69527a1afbc7f7d120b9c21947e677d80c484c8b65572fa7d4ce3b99f",
+      "lintExcluded": true,
+      "textScan": true,
+      "source": {
+        "description": "NetEase audio-fingerprint WASM base64 wrapper copy",
+        "reference": "https://fn.music.163.com/g/chrome-extension-home-page-beta/"
+      },
+      "hashMode": "lf-text"
+    }
+  ]
+}

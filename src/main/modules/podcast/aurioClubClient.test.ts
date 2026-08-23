@@ -80,14 +80,14 @@ describe('AurioClubClient request routing', () => {
   })
 
   it('routes public registration and password reset requests with API field names', async () => {
-    const fetcher = vi.fn(async () => envelopeResponse({ token: 'token-1', user: userData }))
+    const fetcher = vi.fn(async () => envelopeResponse({ token: 'fixture-token-1', user: userData }))
     const client = new AurioClubClient({
       coreBaseUrl: 'https://core.example/api/v1',
       fetcher: fetcher as unknown as typeof fetch,
     })
 
-    await client.registerPassword('user@example.com', '123456', 'password-1')
-    await client.resetPassword('user@example.com', '654321', 'password-2')
+    await client.registerPassword('user@example.com', '123456', 'fixture-password-1')
+    await client.resetPassword('user@example.com', '654321', 'fixture-password-2')
 
     expect(fetcher).toHaveBeenNthCalledWith(
       1,
@@ -97,7 +97,7 @@ describe('AurioClubClient request routing', () => {
         body: JSON.stringify({
           email: 'user@example.com',
           code: '123456',
-          password: 'password-1',
+          password: 'fixture-password-1',
         }),
       })
     )
@@ -109,7 +109,7 @@ describe('AurioClubClient request routing', () => {
         body: JSON.stringify({
           email: 'user@example.com',
           code: '654321',
-          new_password: 'password-2',
+          new_password: 'fixture-password-2',
         }),
       })
     )
@@ -121,12 +121,12 @@ describe('AurioClubClient request routing', () => {
     )
     const client = new AurioClubClient({
       coreBaseUrl: 'https://core.example/api/v1',
-      getToken: async () => 'token-1',
+      getToken: async () => 'fixture-token-1',
       fetcher: fetcher as unknown as typeof fetch,
     })
 
     await client.updateProfile('AurioUser')
-    await client.changePassword('password-1', 'password-2')
+    await client.changePassword('fixture-password-1', 'fixture-password-2')
     await client.linkDevice('device-1', true)
 
     expect(fetcher).toHaveBeenNthCalledWith(
@@ -139,7 +139,7 @@ describe('AurioClubClient request routing', () => {
       'https://core.example/api/v1/auth/change-password',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ old_password: 'password-1', new_password: 'password-2' }),
+        body: JSON.stringify({ old_password: 'fixture-password-1', new_password: 'fixture-password-2' }),
       })
     )
     expect(fetcher).toHaveBeenNthCalledWith(
@@ -151,7 +151,7 @@ describe('AurioClubClient request routing', () => {
       })
     )
     for (const [, init] of fetcher.mock.calls) {
-      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer token-1')
+      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer fixture-token-1')
     }
   })
 
@@ -214,7 +214,7 @@ describe('AurioClubClient request routing', () => {
       })) as unknown as typeof fetch
     const client = new AurioClubClient({
       coreBaseUrl: 'https://core.example/api/v1',
-      getToken: async () => 'token-1',
+      getToken: async () => 'fixture-token-1',
       fetcher,
     })
 
@@ -243,7 +243,7 @@ describe('AurioClubClient request routing', () => {
     })) as unknown as typeof fetch
     const client = new AurioClubClient({
       coreBaseUrl: 'https://core.example/api/v1',
-      getToken: async () => 'token-1',
+      getToken: async () => 'fixture-token-1',
       fetcher,
     })
 
@@ -281,7 +281,7 @@ describe('AurioClubClient request routing', () => {
     },
     {
       name: 'authentication sessions',
-      data: { token: 'token-1', user: { ...userData, points: '0' } },
+      data: { token: 'fixture-token-1', user: { ...userData, points: '0' } },
       invoke: (client: AurioClubClient) => client.loginPassword('user@example.com', 'password'),
     },
     {
@@ -298,7 +298,7 @@ describe('AurioClubClient request routing', () => {
     const fetcher = vi.fn(async () => envelopeResponse(data, 'trace-invalid'))
     const client = new AurioClubClient({
       coreBaseUrl: 'https://core.example/api/v1',
-      getToken: async () => 'token-1',
+      getToken: async () => 'fixture-token-1',
       fetcher: fetcher as unknown as typeof fetch,
     })
 
@@ -318,7 +318,7 @@ describe('AurioClubClient request routing', () => {
       const fetcher = vi.fn(async () => envelopeResponse(data))
       const client = new AurioClubClient({
         coreBaseUrl: 'https://core.example/api/v1',
-        getToken: async () => 'token-1',
+        getToken: async () => 'fixture-token-1',
         fetcher: fetcher as unknown as typeof fetch,
       })
 

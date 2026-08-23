@@ -447,7 +447,7 @@ export default {
 
     const { handleSearch, handleOpenMusicDetail, handleCopyMusicLink, handleDownloadCover, handleDislikeMusic } = useMusicActions({ props })
 
-    const { isChecking, isLiked, handleToggleLike, handleToggleLikeMultiple, handleToggleUnlikeMultiple } = useLikeMusic({ list: props.list })
+    const { isLiked, handleToggleLike, handleToggleLikeMultiple, handleToggleUnlikeMultiple } = useLikeMusic({ list: props.list })
 
     const { menus, menuLocation, isShowItemMenu, showMenu, menuClick } = useMenu({
       props,

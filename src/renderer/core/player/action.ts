@@ -721,9 +721,9 @@ export const stop = () => {
 export const togglePlay = () => {
   window.lx.isPlayedStop &&= false
   if (isPlay.value) {
-    pause()
+    void pause()
   } else {
-    play()
+    void play()
   }
 }
 

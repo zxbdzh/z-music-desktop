@@ -103,7 +103,7 @@
 </template>
 
 <script>
-import { ref, toRaw } from '@common/utils/vueTools'
+import { toRaw } from '@common/utils/vueTools'
 import wyUtil from '@renderer/utils/musicSdk/wy/wyUtil'
 import { playList } from '@renderer/core/player'
 import { setTempList } from '@renderer/store/list/action'

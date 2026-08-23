@@ -11,11 +11,11 @@ const sendListAction = async (
 ) => {
   // console.log('sendListAction', action.action)
   const userSpace = getUserSpace()
-  let key = ''
-  for (const client of wss.clients) {
-    if (!client.moduleReadys?.list) continue
+  const clients = [...wss.clients].filter((client) => client.moduleReadys?.list)
+  if (!clients.length) return
+  const key = await userSpace.listManage.createSnapshot()
 
-    if (!key) key = await userSpace.listManage.createSnapshot()
+  for (const client of clients) {
     void client.remoteQueueList
       .onListSyncAction(action)
       .then(async () => {

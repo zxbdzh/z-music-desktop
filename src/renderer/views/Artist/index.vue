@@ -132,7 +132,7 @@
 </template>
 
 <script>
-import { ref, computed, markRaw, toRaw, toRawDeep } from '@common/utils/vueTools'
+import { markRaw, toRaw, toRawDeep } from '@common/utils/vueTools'
 import wyUtil from '@renderer/utils/musicSdk/wy/wyUtil'
 import { playList } from '@renderer/core/player'
 import { setTempList } from '@renderer/store/list/action'

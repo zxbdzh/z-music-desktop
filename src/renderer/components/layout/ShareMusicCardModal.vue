@@ -1416,6 +1416,8 @@ const runBatchSave = async (
     pageDraft.value = currentPageIndex.value + 1
     batchSaving.value = false
     batchCancelling.value = false
+    // batchBusy synchronously prevents a second batch from entering this try/finally.
+    // eslint-disable-next-line require-atomic-updates
     batchCancelRequested = false
     closeAfterBatchCancel = false
     batchTargetTotal.value = 0

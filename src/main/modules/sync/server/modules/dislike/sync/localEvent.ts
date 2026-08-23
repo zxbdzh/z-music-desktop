@@ -11,11 +11,11 @@ const sendListAction = async (
 ) => {
   // console.log('sendListAction', action.action)
   const userSpace = getUserSpace()
-  let key = ''
-  for (const client of wss.clients) {
-    if (!client.moduleReadys?.dislike) continue
+  const clients = [...wss.clients].filter((client) => client.moduleReadys?.dislike)
+  if (!clients.length) return
+  const key = await userSpace.dislikeManage.createSnapshot()
 
-    if (!key) key = await userSpace.dislikeManage.createSnapshot()
+  for (const client of clients) {
     void client.remoteQueueDislike
       .onDislikeSyncAction(action)
       .then(async () => {

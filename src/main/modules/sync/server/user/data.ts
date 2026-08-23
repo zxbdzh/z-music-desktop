@@ -24,8 +24,16 @@ const saveServerInfoThrottle = throttle(() => {
   )
 })
 let serverInfo: ServerInfo
+let initServerInfoPromise: Promise<void> | null = null
 export const initServerInfo = async () => {
   if (serverInfo != null) return
+  initServerInfoPromise ??= loadServerInfo().finally(() => {
+    initServerInfoPromise = null
+  })
+  await initServerInfoPromise
+}
+
+const loadServerInfo = async () => {
   const serverInfoFilePath = path.join(global.lxDataPath, File.serverDataPath, File.serverInfoJSON)
   if (await exists(serverInfoFilePath)) {
     serverInfo = JSON.parse((await fs.promises.readFile(serverInfoFilePath)).toString())

@@ -56,7 +56,7 @@ export default () => {
 
     if (playedTime >= MIN_PLAY_TIME || (totalTime > 0 && playedTime >= totalTime * MIN_PLAY_PERCENT)) {
       scrobbleInfo.isScrobbled = true
-      sendScrobble(scrobbleInfo)
+      void sendScrobble(scrobbleInfo)
     }
   }
 
@@ -171,7 +171,7 @@ export default () => {
       // 播放完成时，几乎一定满足 scrobble 条件
       if (playedTime >= MIN_PLAY_TIME || (totalTime > 0 && playedTime >= totalTime * MIN_PLAY_PERCENT)) {
         scrobbleInfo.isScrobbled = true
-        sendScrobble(scrobbleInfo)
+        void sendScrobble(scrobbleInfo)
       }
     }
   }

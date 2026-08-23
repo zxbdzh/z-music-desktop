@@ -51,13 +51,13 @@ async function getBilibiliMusicUrl(musicInfo: any, type: string): Promise<{ url:
   let cidRes: any = null
   if (!cid) {
     cidRes = await getCid(bvid, aid)
-    cid = cidRes?.data?.cid
   }
   if (!cidRes) {
     try {
       cidRes = await getCid(bvid, aid)
     } catch (_) {}
   }
+  cid ??= cidRes?.data?.cid
 
   // 多P视频修正当前 P 时长
   const pages = cidRes?.data?.pages

@@ -4,16 +4,17 @@ import os from 'node:os'
 import path from 'node:path'
 import { PodcastStorage } from './storage'
 
-let tempDir = ''
+const tempDirs = new Set<string>()
 
 afterEach(async () => {
-  if (tempDir) await rm(tempDir, { recursive: true, force: true })
-  tempDir = ''
+  await Promise.all([...tempDirs].map((dir) => rm(dir, { recursive: true, force: true })))
+  tempDirs.clear()
 })
 
 describe('PodcastStorage download state', () => {
   it('restores a completed download from disk across storage instances', async () => {
-    tempDir = await mkdtemp(path.join(os.tmpdir(), 'ikun-podcast-storage-'))
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ikun-podcast-storage-'))
+    tempDirs.add(tempDir)
     global.lx = {
       appSetting: {
         'podcast.downloadPath': tempDir,
@@ -30,7 +31,8 @@ describe('PodcastStorage download state', () => {
   })
 
   it('does not treat a partial file as a completed download', async () => {
-    tempDir = await mkdtemp(path.join(os.tmpdir(), 'ikun-podcast-storage-'))
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'ikun-podcast-storage-'))
+    tempDirs.add(tempDir)
     global.lx = {
       appSetting: {
         'podcast.downloadPath': tempDir,

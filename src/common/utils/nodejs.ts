@@ -40,7 +40,7 @@ export const checkAndCreateDir = async (path: string) => {
   return fs.promises
     .access(path, fs.constants.F_OK | fs.constants.W_OK)
     .catch(async (err: NodeJS.ErrnoException) => {
-      if (err.code != 'ENOENT') throw err as Error
+      if (err.code != 'ENOENT') throw err
       return fs.promises.mkdir(path, { recursive: true })
     })
     .then(() => true)

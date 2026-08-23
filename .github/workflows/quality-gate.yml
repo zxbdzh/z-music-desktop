@@ -45,8 +45,20 @@ jobs:
       - name: Check brand assets
         run: pnpm brand:check
 
-      - name: Lint
+      - name: Test lint gate configuration
+        run: pnpm lint:test
+
+      - name: Lint first-party source
         run: pnpm lint
+
+      - name: Upload lint quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-quality-report
+          path: .artifacts/lint/report.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Test
         run: pnpm test:run

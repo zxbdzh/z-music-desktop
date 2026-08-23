@@ -8,9 +8,6 @@ import {
   stopSecondary,
   setVolumeSecondary,
   swapActiveAudio,
-  resetCrossfadeGains,
-  setCrossfadeGain1,
-  setCrossfadeGain2,
   onCanplaySecondary,
   onErrorSecondary,
   onTimeupdateSecondary,
@@ -43,23 +40,22 @@ import {
   setMusicInfo,
 } from '@renderer/store/player/action'
 import { volume } from '@renderer/store/player/volume'
-import { preloadCache } from './usePreloadNextMusic'
+import { createPreparationGate } from './preparationGate'
 import { isCrossfading, isCrossfadeCompleting, crossfadeDoneMusicId, lastCrossfadeEndTime, isAfterCrossfade, registerCancelCrossfade, isSeamlessPausing } from './crossfadeState'
 
 let crossfadeAnimId: number | null = null
 let swapTimeout: NodeJS.Timeout | null = null
-let nextMusicUrl: string | null = null
-let nextMusicInfoCache: LX.Player.PlayMusicInfo | null = null
 let canplayUnsub: (() => void) | null = null
 let errorUnsub: (() => void) | null = null
 let timeupdateUnsub: (() => void) | null = null
 let loadedmetadataUnsub: (() => void) | null = null
-let isPreparing = false
+const preparationGate = createPreparationGate()
 let isCompleting = false
 export { isCompleting }  // exported so usePlayProgress can guard setProgress during crossfade
 let pendingNextDuration = 0
 
 const doCancelCrossfade = () => {
+  preparationGate.cancel()
   if (crossfadeAnimId != null) {
     cancelAnimationFrame(crossfadeAnimId)
     crossfadeAnimId = null
@@ -97,10 +93,7 @@ const doCancelCrossfade = () => {
   crossfadeDoneMusicId.value = null
   lastCrossfadeEndTime.value = 0
   isAfterCrossfade.value = false
-  isPreparing = false
   isCompleting = false
-  nextMusicUrl = null
-  nextMusicInfoCache = null
   pendingNextDuration = 0
 }
 
@@ -140,7 +133,7 @@ const completeCrossfade = (nextInfo: LX.Player.PlayMusicInfo) => {
   isAfterCrossfade.value = false
   isCrossfading.value = false
   isCrossfadeCompleting.value = false
-  isPreparing = false
+  preparationGate.cancel()
   isCompleting = false
 
   resetRandomNextMusicInfo()
@@ -334,7 +327,7 @@ const fetchNextMusicUrl = async (nextInfo: LX.Player.PlayMusicInfo): Promise<str
 }
 
 const tryStartCrossfade = async (curTime: number) => {
-  if (isCrossfading.value || isPreparing) return
+  if (isCrossfading.value || preparationGate.isActive()) return
   if (isSeamlessPausing.value) return
   if (!isPlay.value) return
 
@@ -357,42 +350,30 @@ const tryStartCrossfade = async (curTime: number) => {
 
   if (duration - curTime > transitionDuration) return
 
-  isPreparing = true
+  const generation = preparationGate.begin()
+  if (generation == null) return
+  const isStale = () => (
+    !preparationGate.isCurrent(generation) ||
+    !appSetting['player.transitionEnabled'] ||
+    isSeamlessPausing.value ||
+    !isPlay.value
+  )
 
-  const nextInfo = await getNextPlayMusicInfo()
-  if (!nextInfo) {
-    isPreparing = false
-    return
+  try {
+    const nextInfo = await getNextPlayMusicInfo()
+    if (!nextInfo || isStale()) return
+
+    const nextMusic =
+      'progress' in nextInfo.musicInfo ? nextInfo.musicInfo.metadata.musicInfo : nextInfo.musicInfo
+    if ('podcast' in nextMusic.meta) return
+
+    const url = await fetchNextMusicUrl(nextInfo)
+    if (!url || isStale()) return
+
+    executeCrossfade(nextInfo, url, transitionDuration)
+  } finally {
+    if (!isCrossfading.value) preparationGate.finish(generation)
   }
-  const nextMusic =
-    'progress' in nextInfo.musicInfo ? nextInfo.musicInfo.metadata.musicInfo : nextInfo.musicInfo
-  if ('podcast' in nextMusic.meta) {
-    isPreparing = false
-    return
-  }
-
-  // 异步操作后再次检查无缝暂停状态
-  if (isSeamlessPausing.value) {
-    isPreparing = false
-    return
-  }
-
-  nextMusicInfoCache = nextInfo
-
-  const url = await fetchNextMusicUrl(nextInfo)
-  if (!url) {
-    isPreparing = false
-    return
-  }
-
-  // 异步操作后再次检查无缝暂停状态
-  if (isSeamlessPausing.value) {
-    isPreparing = false
-    return
-  }
-
-  nextMusicUrl = url
-  executeCrossfade(nextInfo, url, transitionDuration)
 }
 
 export default () => {
@@ -419,14 +400,13 @@ export default () => {
     () => {
       console.log('transitionEnabled changed')
       if (isCrossfading.value) doCancelCrossfade()
+      else preparationGate.cancel()
     }
   )
 
   window.app_event.on('musicToggled', () => {
     if (isCrossfading.value) doCancelCrossfade()
-    isPreparing = false
-    nextMusicUrl = null
-    nextMusicInfoCache = null
+    else preparationGate.cancel()
   })
 
   onBeforeUnmount(() => {

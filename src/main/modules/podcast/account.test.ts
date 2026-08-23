@@ -14,7 +14,7 @@ vi.mock('electron', () => ({
 describe('PodcastModule account workflows', () => {
   it('reuses the login workflow after password registration', async () => {
     const client = {
-      registerPassword: vi.fn(async () => ({ token: 'token-1', user: aurioUser })),
+      registerPassword: vi.fn(async () => ({ token: 'fixture-token-1', user: aurioUser })),
       me: vi.fn(async () => ({ user: aurioUser })),
     }
     const module = preparedModule(client)
@@ -26,13 +26,13 @@ describe('PodcastModule account workflows', () => {
       action: 'register-password',
       email: 'user@example.com',
       code: '123456',
-      password: 'password-1',
+      password: 'fixture-password-1',
     })
 
     expect(client.registerPassword).toHaveBeenCalledWith(
       'user@example.com',
       '123456',
-      'password-1'
+      'fixture-password-1'
     )
     expect(client.me).toHaveBeenCalledOnce()
     expect(session).toMatchObject({
@@ -40,7 +40,7 @@ describe('PodcastModule account workflows', () => {
       syncEnabled: true,
       syncState: 'idle',
     })
-    expect((module as any).token).toBe('token-1')
+    expect((module as any).token).toBe('fixture-token-1')
     expect(persistSession).toHaveBeenCalledOnce()
   })
 
@@ -75,21 +75,21 @@ describe('PodcastModule account workflows', () => {
       action: 'reset-password',
       email: 'user@example.com',
       code: '123456',
-      newPassword: 'password-2',
+      newPassword: 'fixture-password-2',
     })
     await module.execute({
       action: 'change-password',
-      oldPassword: 'password-1',
-      newPassword: 'password-2',
+      oldPassword: 'fixture-password-1',
+      newPassword: 'fixture-password-2',
     })
     await module.execute({ action: 'link-device', migrateGuestData: true })
 
     expect(client.resetPassword).toHaveBeenCalledWith(
       'user@example.com',
       '123456',
-      'password-2'
+      'fixture-password-2'
     )
-    expect(client.changePassword).toHaveBeenCalledWith('password-1', 'password-2')
+    expect(client.changePassword).toHaveBeenCalledWith('fixture-password-1', 'fixture-password-2')
     expect(client.linkDevice).toHaveBeenCalledWith('device-1', true)
     expect(syncNow).toHaveBeenCalledOnce()
   })

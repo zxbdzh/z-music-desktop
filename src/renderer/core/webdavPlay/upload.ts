@@ -55,6 +55,8 @@ export const downloadListToWebDAV = async (params: DownloadParams): Promise<Uplo
   try {
     return await runDownloadListToWebDAV(params)
   } finally {
+    // The synchronous transferring guard prevents another transfer from entering this block.
+    // eslint-disable-next-line require-atomic-updates
     transferring = false
   }
 }
