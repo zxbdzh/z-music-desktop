@@ -79,8 +79,8 @@ $env:APIFOX_ACCESS_TOKEN = '<local-apifox-access-token>'
 npm run test:apifox -- --upload-report
 ```
 
-GitHub Actions 使用两个含义独立的工作流。`.github/workflows/aurio-contract-verifier.yml` 对每个指向 `main` 的 PR 运行 PR 代码中的无 Secret 验证器单测，并关闭 checkout 凭据持久化；该检查不使用 `paths` 过滤，因此可稳定配置为 Required Check。`.github/workflows/aurio-contract-regression.yml` 只在 `main` 治理资产变更、`main` 上手动触发和每天 `02:30 UTC` 定时任务中使用 Secret 运行实时契约；非 `main` ref 的手动运行会在读取 Environment 或 checkout 前跳过。特权工作流不使用 `pull_request` 或 `pull_request_target`，避免不受信任的 PR 消耗 Apifox 调用或云报告配额。实时工作流先运行验证器单测，再直接 `exec node`，让取消信号到达编排器。
+GitHub Actions 使用两个含义独立的工作流。`.github/workflows/aurio-contract-verifier.yml` 对每个指向 `main` 的 PR 及每个 `main` push 运行无 Secret 验证器与仓库治理单测，并关闭 checkout 凭据持久化；该检查不使用 `paths` 过滤，因此可稳定配置为 Required Check并出现在合并候选commit上。`.github/workflows/aurio-contract-regression.yml` 只允许在 `main` 上手动触发，不使用 `push`、`schedule`、`pull_request` 或 `pull_request_target`，避免缺失 Secret、外部服务波动或不受信任 PR 消耗 Apifox 调用与云报告配额。
 
-实时工作流绑定名为 `aurio-contract-regression` 的 GitHub Environment。首次运行前必须把该 Environment 的 Deployment branches 限制为仅 `main`，并只在其中创建 `APIFOX_ACCESS_TOKEN` Environment Secret；仓库和组织层不得保留同名 Secret，防止 Environment 配置缺失时扩大凭据可见范围。若为该 Environment 增加 required reviewer，每日定时任务也会等待人工批准。PR 阶段只能强制执行无 Secret 单测；完整实时契约对 PR 代码的最终验证发生在合并后的 `main` push，除非未来引入不需要长期 Secret 的隔离 Runner 或短期凭据代理。
+实时工作流绑定名为 `aurio-contract-regression` 的 GitHub Environment，Deployment branches 仅允许 `main`。默认将 Environment variable `APIFOX_REGRESSION_ENABLED` 设为 `false`；此时手动运行以 notice 明确跳过并保持成功。启用前必须只在该 Environment 创建 `APIFOX_ACCESS_TOKEN` Secret，再将变量设为 `true`。若变量为 `true` 但 Secret 缺失，工作流以配置错误失败。仓库和组织层不得保留同名 Secret，普通 PR与Required Checks始终不读取自定义Secret。
 
 项目当前没有 Apifox Runner。Apifox 云端定时任务无法启动本仓库的 Mock，也无法访问 `127.0.0.1:48765`，因此未创建一个必然失败的 Apifox 定时任务；定时门禁由能在作业内启动 Mock 的 GitHub Actions 承担。
