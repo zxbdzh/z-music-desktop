@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { createReadStream, existsSync, statSync, writeFileSync } from 'node:fs'
-import { basename, resolve } from 'node:path'
+import { basename, dirname, resolve } from 'node:path'
 import { DESKTOP_RELEASE } from './desktop-config.mjs'
 
 const [commit, output = 'build/release-manifest.json', ...files] = process.argv.slice(2)
@@ -29,7 +29,7 @@ const manifest = {
 }
 writeFileSync(resolve(output), `${JSON.stringify(manifest, null, 2)}\n`)
 writeFileSync(
-  resolve('build/SHA256SUMS.txt'),
+  resolve(dirname(output), 'SHA256SUMS.txt'),
   `${artifacts.map(({ sha256, name }) => `${sha256}  ${name}`).join('\n')}\n`
 )
 console.log(JSON.stringify(manifest, null, 2))
