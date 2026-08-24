@@ -1,0 +1,1212 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "executable-product-evidence",
+  "commit": "cccae6ca3dec692821516a9b7c51552e51046cfd",
+  "generatedAt": "2026-08-24T02:42:09.420Z",
+  "fixtureCatalog": {
+    "version": "1.0",
+    "path": "docs/qa/fixtures/catalog.v1.json"
+  },
+  "matrix": [
+    {
+      "id": "desktop-rc-home-828x540-light-loading-zh-cn-long-motion",
+      "issue": 10,
+      "state": "loading",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 828,
+          "height": 540
+        },
+        "orientation": "landscape",
+        "theme": "light",
+        "fontScale": 1.25,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, light, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "home with loading fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-discover-900x600-dark-empty-en-us-long-reduced",
+      "issue": 10,
+      "state": "empty",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 900,
+          "height": 600
+        },
+        "orientation": "landscape",
+        "theme": "dark",
+        "fontScale": 1,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, dark, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "discover with empty fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-search-1080x720-custom-green-partial-zh-cn-long-motion",
+      "issue": 10,
+      "state": "partial",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1080,
+          "height": 720
+        },
+        "orientation": "landscape",
+        "theme": "custom:green",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, custom:green, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "search with partial fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-library-1440x900-custom-blue_plus-error-en-us-long-reduced",
+      "issue": 10,
+      "state": "error",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "orientation": "landscape",
+        "theme": "custom:blue_plus",
+        "fontScale": 1.25,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, custom:blue_plus, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "library with error fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-now-playing-828x540-light-permission-denied-zh-cn-long-motion",
+      "issue": 13,
+      "state": "permission-denied",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 828,
+          "height": 540
+        },
+        "orientation": "landscape",
+        "theme": "light",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, light, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "now-playing with permission-denied fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-settings-900x600-dark-success-en-us-long-reduced",
+      "issue": 11,
+      "state": "success",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 900,
+          "height": 600
+        },
+        "orientation": "landscape",
+        "theme": "dark",
+        "fontScale": 1,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, dark, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "settings with success fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-service-1080x720-custom-green-loading-zh-cn-long-motion",
+      "issue": 12,
+      "state": "loading",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1080,
+          "height": 720
+        },
+        "orientation": "landscape",
+        "theme": "custom:green",
+        "fontScale": 1.25,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, custom:green, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "service with loading fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-report-1440x900-custom-blue_plus-empty-en-us-long-reduced",
+      "issue": 13,
+      "state": "empty",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "orientation": "landscape",
+        "theme": "custom:blue_plus",
+        "fontScale": 1,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, custom:blue_plus, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "report with empty fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-home-828x540-light-partial-zh-cn-long-motion",
+      "issue": 10,
+      "state": "partial",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 828,
+          "height": 540
+        },
+        "orientation": "landscape",
+        "theme": "light",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, light, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "home with partial fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-discover-900x600-dark-error-en-us-long-reduced",
+      "issue": 10,
+      "state": "error",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 900,
+          "height": 600
+        },
+        "orientation": "landscape",
+        "theme": "dark",
+        "fontScale": 1.25,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, dark, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "discover with error fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-search-1080x720-custom-green-permission-denied-zh-cn-long-motion",
+      "issue": 10,
+      "state": "permission-denied",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1080,
+          "height": 720
+        },
+        "orientation": "landscape",
+        "theme": "custom:green",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, custom:green, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "search with permission-denied fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-library-1440x900-custom-blue_plus-success-en-us-long-reduced",
+      "issue": 10,
+      "state": "success",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "orientation": "landscape",
+        "theme": "custom:blue_plus",
+        "fontScale": 1,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, custom:blue_plus, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "library with success fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-now-playing-828x540-light-loading-zh-cn-long-motion",
+      "issue": 13,
+      "state": "loading",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 828,
+          "height": 540
+        },
+        "orientation": "landscape",
+        "theme": "light",
+        "fontScale": 1.25,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, light, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "now-playing with loading fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-settings-900x600-dark-empty-en-us-long-reduced",
+      "issue": 11,
+      "state": "empty",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 900,
+          "height": 600
+        },
+        "orientation": "landscape",
+        "theme": "dark",
+        "fontScale": 1,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, dark, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "settings with empty fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-service-1080x720-custom-green-partial-zh-cn-long-motion",
+      "issue": 12,
+      "state": "partial",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1080,
+          "height": 720
+        },
+        "orientation": "landscape",
+        "theme": "custom:green",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, custom:green, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "service with partial fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-report-1440x900-custom-blue_plus-error-en-us-long-reduced",
+      "issue": 13,
+      "state": "error",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "orientation": "landscape",
+        "theme": "custom:blue_plus",
+        "fontScale": 1.25,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, custom:blue_plus, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "report with error fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-home-828x540-light-permission-denied-zh-cn-long-motion",
+      "issue": 10,
+      "state": "permission-denied",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 828,
+          "height": 540
+        },
+        "orientation": "landscape",
+        "theme": "light",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, light, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "home with permission-denied fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-discover-900x600-dark-success-en-us-long-reduced",
+      "issue": 10,
+      "state": "success",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 900,
+          "height": 600
+        },
+        "orientation": "landscape",
+        "theme": "dark",
+        "fontScale": 1,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, dark, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "discover with success fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-search-1080x720-custom-green-loading-zh-cn-long-motion",
+      "issue": 10,
+      "state": "loading",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1080,
+          "height": 720
+        },
+        "orientation": "landscape",
+        "theme": "custom:green",
+        "fontScale": 1.25,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, custom:green, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "search with loading fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-library-1440x900-custom-blue_plus-empty-en-us-long-reduced",
+      "issue": 10,
+      "state": "empty",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "orientation": "landscape",
+        "theme": "custom:blue_plus",
+        "fontScale": 1,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, custom:blue_plus, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "library with empty fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-now-playing-828x540-light-partial-zh-cn-long-motion",
+      "issue": 13,
+      "state": "partial",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 828,
+          "height": 540
+        },
+        "orientation": "landscape",
+        "theme": "light",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, light, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "now-playing with partial fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-settings-900x600-dark-error-en-us-long-reduced",
+      "issue": 11,
+      "state": "error",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 900,
+          "height": 600
+        },
+        "orientation": "landscape",
+        "theme": "dark",
+        "fontScale": 1.25,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, dark, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "settings with error fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-service-1080x720-custom-green-permission-denied-zh-cn-long-motion",
+      "issue": 12,
+      "state": "permission-denied",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1080,
+          "height": 720
+        },
+        "orientation": "landscape",
+        "theme": "custom:green",
+        "fontScale": 1,
+        "reducedMotion": false
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "zh-CN-long, custom:green, normal motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "service with permission-denied fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    },
+    {
+      "id": "desktop-rc-report-1440x900-custom-blue_plus-success-en-us-long-reduced",
+      "issue": 13,
+      "state": "success",
+      "target": {
+        "platform": "electron",
+        "os": "windows"
+      },
+      "display": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "orientation": "landscape",
+        "theme": "custom:blue_plus",
+        "fontScale": 1,
+        "reducedMotion": true
+      },
+      "operationPath": [
+        {
+          "tool": "agent-browser",
+          "action": "connect",
+          "target": "Electron renderer CDP port 9333"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "emulate",
+          "target": "en-US-long, custom:blue_plus, reduced motion"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "navigate",
+          "target": "report with success fixture"
+        },
+        {
+          "tool": "agent-browser",
+          "action": "snapshot",
+          "target": "accessible controls, focus, status, and recovery action"
+        }
+      ],
+      "artifacts": [
+        {
+          "type": "log",
+          "storage": "checked-in",
+          "path": "docs/qa/evidence/desktop-rc-agent-browser.log",
+          "sha256": "2ec5423b3d8c547b5a970ebd91c840c563e9ebcebcb735db8d704df2d19c5905"
+        }
+      ],
+      "result": "PASS"
+    }
+  ]
+}
