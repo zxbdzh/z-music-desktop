@@ -20,6 +20,7 @@ const options = {
     buildResources: './resources',
     output: process.env.Z_MUSIC_BUILD_OUTPUT || process.env.IKUN_BUILD_OUTPUT || './build',
   },
+  npmRebuild: process.env.Z_MUSIC_SKIP_NATIVE_REBUILD !== 'true',
   files: [
     '!node_modules/**/*',
     'node_modules/font-list',
@@ -51,7 +52,7 @@ const options = {
   asar: {
     smartUnpack: false,
   },
-  extraResources: ['./licenses', './NOTICE'],
+  extraResources: ['./licenses', './LICENSE', './NOTICE'],
   publish: [
     {
       provider: 'github',
@@ -65,10 +66,11 @@ const options = {
  * @see https://www.electron.build/configuration/configuration
  */
 const winOptions = {
-  extraResources: ['./licenses', './NOTICE'],
+  extraResources: ['./licenses', './LICENSE', './NOTICE'],
   win: {
     icon: './resources/icons/icon.ico',
     legalTrademarks: 'zxbdzh',
+    requestedExecutionLevel: 'asInvoker',
     // artifactName: '${productName}-v${version}-${env.ARCH}-${env.TARGET}.${ext}',
   },
   nsis: {
@@ -78,6 +80,7 @@ const winOptions = {
     // differentialPackage: true,
     license: './licenses/license.rtf',
     shortcutName: 'z-music-desktop',
+    deleteAppDataOnUninstall: false,
   },
 }
 /**

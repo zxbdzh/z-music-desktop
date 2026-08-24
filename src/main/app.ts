@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { env } from 'node:process'
 import { existsSync, mkdirSync, renameSync } from 'fs'
 import { app, shell, screen, nativeTheme, dialog } from 'electron'
 import { URL_SCHEME_RXP } from '@common/constants'
@@ -12,7 +13,7 @@ import createWorkers from './worker'
 import { migrateDBData } from './utils/migrate'
 import { openDirInExplorer } from '@common/utils/electron'
 import { setProxyByHost } from '@common/utils/request'
-import { resolveCompatibleUserDataPath } from './utils/userDataPath'
+import { resolveCompatibleUserDataPath, resolvePortableRoot } from './utils/userDataPath'
 
 export const initGlobalData = () => {
   const envParams = parseEnvParams()
@@ -136,7 +137,11 @@ export const setUserDataPath = () => {
   let isPortable = false
   // windows平台下如果应用目录下存在 portable 文件夹则将数据存在此文件下
   if (process.platform == 'win32') {
-    const portablePath = path.join(path.dirname(app.getPath('exe')), '/portable')
+    const portableRoot = resolvePortableRoot({
+      executablePath: app.getPath('exe'),
+      portableExecutableDir: env.PORTABLE_EXECUTABLE_DIR,
+    })
+    const portablePath = path.join(portableRoot, 'portable')
     if (existsSync(portablePath)) {
       isPortable = true
       app.setPath('appData', portablePath)
