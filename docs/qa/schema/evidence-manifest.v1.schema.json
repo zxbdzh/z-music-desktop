@@ -74,7 +74,12 @@
       "properties": {
         "viewport": { "$ref": "#/$defs/viewport" },
         "orientation": { "enum": ["portrait", "landscape"] },
-        "theme": { "enum": ["light", "dark", "system"] },
+        "theme": {
+          "anyOf": [
+            { "enum": ["light", "dark", "system"] },
+            { "type": "string", "pattern": "^custom:[a-z0-9][a-z0-9_-]*$" }
+          ]
+        },
         "fontScale": { "type": "number", "exclusiveMinimum": 0 },
         "reducedMotion": { "type": "boolean" }
       }

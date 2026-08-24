@@ -66,6 +66,9 @@
         <span>{{ $t('loading') }}</span>
       </div>
       <template v-else-if="reportData">
+        <p v-if="reportViewState == 'partial'" :class="$style.partial" role="status" aria-live="polite">
+          {{ $t('listen_data_partial_desc') }}
+        </p>
         <ListenProgress :key="activeTab + '-' + periodOffset" :data="reportData" :type="activeTab" :periodOffset="periodOffset" />
         <template v-if="activeTab !== 'year'">
           <ListenTimeChart :data="reportData.listenTimeDistributionBlock" />
@@ -84,7 +87,7 @@
         <h2>{{ $t(emptyTitleKey) }}</h2>
         <p :class="$style.emptyDescription">{{ $t(emptyDescriptionKey) }}</p>
         <div :class="$style.emptyActions">
-          <button v-if="needsSettings" type="button" :class="$style.primaryAction" @click="goToSettings">
+          <button v-if="needsSettings || reportViewState == 'auth-expired'" type="button" :class="$style.primaryAction" @click="goToSettings">
             {{ $t('listen_data_open_settings') }}
           </button>
           <button v-else type="button" :class="$style.secondaryAction" @click="loadData">
@@ -111,6 +114,7 @@ import StyleDistribution from './components/StyleDistribution.vue'
 import AgeDistribution from './components/AgeDistribution.vue'
 import LanguageDistribution from './components/LanguageDistribution.vue'
 import FriendsActivity from './components/FriendsActivity.vue'
+import { resolveReportViewState } from './reportState'
 
 const tabs = [
   { id: 'week', label: 'listen_data_tab_week' },
@@ -182,23 +186,31 @@ export default {
     const periodOffset = ref(-1) // 默认显示上一个完成周期
     const isLoading = ref(false)
     const reportData = ref(null)
-    const loadError = ref(false)
+    const loadError = ref(null)
     let requestToken = 0
 
     const currentEndTime = computed(() => getEndTime(activeTab.value, periodOffset.value))
     const serviceConfigured = computed(() => Boolean(normalizeWyApiBaseUrl(appSetting['wy.apiBaseUrl'])))
     const loggedIn = computed(() => Boolean(appSetting['common.wy_cookie']))
     const needsSettings = computed(() => !serviceConfigured.value || !loggedIn.value)
+    const reportViewState = computed(() => resolveReportViewState({
+      serviceConfigured: serviceConfigured.value,
+      loggedIn: loggedIn.value,
+      error: loadError.value,
+      data: reportData.value,
+    }))
     const emptyTitleKey = computed(() => {
-      if (!serviceConfigured.value) return 'listen_data_service_missing_title'
-      if (!loggedIn.value) return 'listen_data_login_missing_title'
-      if (loadError.value) return 'listen_data_load_failed_title'
+      if (reportViewState.value == 'service-missing') return 'listen_data_service_missing_title'
+      if (reportViewState.value == 'login-missing') return 'listen_data_login_missing_title'
+      if (reportViewState.value == 'auth-expired') return 'listen_data_auth_expired_title'
+      if (reportViewState.value == 'unreachable') return 'listen_data_load_failed_title'
       return 'listen_data_no_data'
     })
     const emptyDescriptionKey = computed(() => {
-      if (!serviceConfigured.value) return 'listen_data_service_missing_desc'
-      if (!loggedIn.value) return 'listen_data_login_missing_desc'
-      if (loadError.value) return 'listen_data_load_failed_desc'
+      if (reportViewState.value == 'service-missing') return 'listen_data_service_missing_desc'
+      if (reportViewState.value == 'login-missing') return 'listen_data_login_missing_desc'
+      if (reportViewState.value == 'auth-expired') return 'listen_data_auth_expired_desc'
+      if (reportViewState.value == 'unreachable') return 'listen_data_load_failed_desc'
       return 'listen_data_no_data'
     })
     const periodLabel = computed(() => {
@@ -220,7 +232,7 @@ export default {
     const loadData = async() => {
       const token = ++requestToken
       const cookie = appSetting['common.wy_cookie']
-      loadError.value = false
+      loadError.value = null
       if (!serviceConfigured.value || !cookie) {
         reportData.value = null
         isLoading.value = false
@@ -241,9 +253,9 @@ export default {
         }
         if (token !== requestToken) return
         reportData.value = data
-      } catch {
+      } catch (error) {
         if (token !== requestToken) return
-        loadError.value = true
+        loadError.value = error
         reportData.value = null
       } finally {
         if (token === requestToken) isLoading.value = false
@@ -293,6 +305,7 @@ export default {
       periodOffset,
       isLoading,
       reportData,
+      reportViewState,
       emptyTitleKey,
       emptyDescriptionKey,
       needsSettings,
@@ -479,6 +492,15 @@ export default {
   min-height: 0;
   overflow-y: auto;
   padding: 24px 28px 36px;
+}
+
+.partial {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-button-background-hover);
+  color: var(--color-font-label);
+  line-height: 1.5;
 }
 
 .loading {

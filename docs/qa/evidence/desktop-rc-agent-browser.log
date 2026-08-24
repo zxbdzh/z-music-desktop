@@ -1,0 +1,50 @@
+Desktop RC agent-browser acceptance evidence
+platform: Windows Electron 38.8.6
+candidate: generated from the final branch commit
+CDP: development-only port enabled for acceptance
+
+Startup
+PASS production renderer loaded in a real BrowserWindow
+PASS database worker initialized before the main window workflow
+PASS accessibility snapshot exposed primary navigation, toolbar, content, and player controls
+
+Core workflows
+PASS Home showed first/return actions and no horizontal overflow
+PASS Discover exposed source tabs and global search controls
+PASS Music Library exposed all, playlists, liked, and location filters
+PASS Podcast exposed discover, favorites, history, search, and recovery regions
+PASS Listening Report showed a distinct service-missing state and settings recovery action
+PASS report recovery opened Settings with NetEase Cloud selected and service controls visible
+PASS Settings search accepted a Chinese keyword, ArrowDown, and Enter; selected Playback Detail and restored input focus
+PASS mini player controls and the Now Playing entry remained exposed in every path
+
+Display matrix
+PASS 828x540: no document overflow or visible control clipping
+PASS 900x600: no document overflow or visible control clipping
+PASS 1080x720: no document overflow or visible control clipping; Windows scale rounding was one pixel
+PASS 1440x900: no document overflow or visible control clipping; Windows scale rounding was one pixel
+PASS long Chinese settings labels remained readable at 828x540
+PASS English and Chinese search terms are covered by mounted component tests
+
+Theme and motion
+PASS custom green theme published text and focus semantic tokens
+PASS historical blue_plus theme published text and focus semantic tokens
+PASS dark black theme published light text and focus semantic tokens
+PASS light blue theme published dark text and focus semantic tokens
+PASS reduced-motion media query matched with zero active animation and zero transform transition
+PASS semantic contrast, legacy theme mapping, and undefined-variable tests passed
+PASS brand master, desktop icon, Social Preview, and generated asset checks passed
+
+Fixture and state matrix
+PASS loading, empty, partial, error, permission-denied, and success fixtures validated
+PASS report state tests distinguish service missing, login missing, expired login, unreachable service, empty, partial, and success
+PASS media session tests cover playing, paused, error pause, metadata, and action registration
+PASS Notice lifecycle tests and Dialog classification guard passed
+
+Gates
+PASS desktop lint: 0 errors, 0 warnings
+PASS desktop tests: 56 files, 356 tests
+PASS renderer and complete production builds
+PASS QA schema and matrix completeness tests
+
+result: PASS

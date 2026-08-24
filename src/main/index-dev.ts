@@ -8,6 +8,12 @@
 import { app } from 'electron'
 import electronDebug from 'electron-debug'
 import installExtension, { VUEJS_DEVTOOLS } from 'electron-devtools-installer'
+
+const cdpPort = process.env.Z_MUSIC_CDP_PORT
+if (cdpPort && /^\d{2,5}$/.test(cdpPort) && Number(cdpPort) <= 65535) {
+  app.commandLine.appendSwitch('remote-debugging-port', cdpPort)
+}
+
 // Install `electron-debug` with `devtron`
 electronDebug({
   showDevTools: false,

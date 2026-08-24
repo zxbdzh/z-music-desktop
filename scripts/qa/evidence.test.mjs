@@ -115,6 +115,16 @@ test('accepts complete Electron and Android matrix rows through the JSON schema'
   })
 })
 
+test('accepts stable custom theme ids and rejects arbitrary theme labels', () => {
+  const root = fixtureRoot()
+  const value = manifest()
+  value.matrix[0].display.theme = 'custom:green'
+  assert.equal(validateEvidenceManifest(value, { root }).rows, 2)
+
+  value.matrix[0].display.theme = 'my old theme'
+  assert.throws(() => validateEvidenceManifest(value, { root }), /theme/)
+})
+
 test('accepts only the frozen Android API levels while preserving Electron rows', () => {
   const root = fixtureRoot()
   for (const apiLevel of [24, 35, 36]) {

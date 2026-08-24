@@ -123,15 +123,26 @@ function startMain() {
 }
 
 function startElectron() {
-  let args = ['--inspect=5858', path.join(__dirname, '../dist/main.js')]
+  const forwardedArgs = process.env.npm_execpath?.endsWith('yarn.js')
+    ? process.argv.slice(3)
+    : process.argv.slice(2)
+  const chromiumArgs = forwardedArgs.filter((arg) => arg.startsWith('--remote-debugging-'))
+  const applicationArgs = forwardedArgs.filter((arg) => !arg.startsWith('--remote-debugging-'))
+  const args = [
+    '--inspect=5858',
+    ...chromiumArgs,
+    path.join(__dirname, '../dist/main.js'),
+    ...applicationArgs,
+  ]
 
-  if (process.env.npm_execpath.endsWith('yarn.js')) {
-    args = args.concat(process.argv.slice(3))
-  } else if (process.env.npm_execpath.endsWith('npm-cli.js')) {
-    args = args.concat(process.argv.slice(2))
-  }
-
-  electronProcess = spawn(electron, args)
+  const cdpArg = chromiumArgs.find((arg) => arg.startsWith('--remote-debugging-port='))
+  const cdpPort = cdpArg?.split('=')[1]
+  electronProcess = spawn(electron, args, {
+    env: {
+      ...process.env,
+      ...(cdpPort ? { Z_MUSIC_CDP_PORT: cdpPort } : {}),
+    },
+  })
   electronProcess.stdout.on('data', (data) => electronLog(data, 'blue'))
   electronProcess.stderr.on('data', (data) => electronLog(data, 'red'))
   electronProcess.on('close', () => process.exit())
