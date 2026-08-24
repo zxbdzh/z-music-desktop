@@ -79,10 +79,10 @@ jobs:
           if (-not (Test-Path "$unpacked/NOTICE")) { throw 'NOTICE missing from package' }
           git diff --exit-code
       - name: Write candidate manifest and SHA-256
-        shell: bash
+        shell: pwsh
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: node scripts/release/write-manifest.mjs "$CANDIDATE_SHA" build/release-manifest.json build/*-x64-Setup.exe build/*-x64-portable.exe
+        run: node scripts/release/write-manifest.mjs $env:CANDIDATE_SHA build/release-manifest.json build/z-music-desktop-v1.5.0-x64-Setup.exe build/z-music-desktop-v1.5.0-x64-portable.exe
       - name: Run Windows install and compatibility acceptance
         shell: pwsh
         run: ./scripts/release/windows-acceptance.ps1 -Setup build/z-music-desktop-v1.5.0-x64-Setup.exe -Portable build/z-music-desktop-v1.5.0-x64-portable.exe -Commit '${{ github.event.pull_request.head.sha || github.sha }}'
@@ -143,13 +143,16 @@ jobs:
         include:
           - name: macOS x64
             os: macos-15-intel
-            command: pnpm pack:mac:dmg
+            command: pnpm build && pnpm pack:mac:dmg
+            forceNativeRebuild: '0'
           - name: macOS arm64
             os: macos-15
-            command: pnpm pack:mac:dmg:arm64
+            command: pnpm build && pnpm pack:mac:dmg:arm64
+            forceNativeRebuild: '0'
           - name: Linux x64
             os: ubuntu-latest
             command: pnpm build && pnpm pack:linux:appImage
+            forceNativeRebuild: '1'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -167,6 +170,8 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm release:audit
       - run: ${{ matrix.command }}
+        env:
+          FORCE: ${{ matrix.forceNativeRebuild }}
       - run: git diff --exit-code
       - uses: actions/upload-artifact@v4
         with:
