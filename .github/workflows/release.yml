@@ -142,16 +142,19 @@ jobs:
         include:
           - name: macOS x64
             os: macos-15-intel
-            command: pnpm build && pnpm pack:mac:dmg
+            command: pnpm build && (pnpm pack:mac:dmg || (hdiutil detach /Volumes/z-music-desktop -force || true; pnpm pack:mac:dmg))
             forceNativeRebuild: '0'
+            skipNativeRebuild: '0'
           - name: macOS arm64
             os: macos-15
             command: pnpm build && pnpm pack:mac:dmg:arm64
             forceNativeRebuild: '0'
+            skipNativeRebuild: '0'
           - name: Linux x64
             os: ubuntu-latest
-            command: pnpm build && pnpm pack:linux:appImage
+            command: pnpm build && pnpm exec electron-rebuild -f -w better-sqlite3 && pnpm pack:linux:appImage
             forceNativeRebuild: '1'
+            skipNativeRebuild: '1'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -174,6 +177,7 @@ jobs:
       - run: ${{ matrix.command }}
         env:
           FORCE: ${{ matrix.forceNativeRebuild }}
+          Z_MUSIC_SKIP_NATIVE_REBUILD: ${{ matrix.skipNativeRebuild }}
       - run: git diff --exit-code
       - uses: actions/upload-artifact@v4
         with:

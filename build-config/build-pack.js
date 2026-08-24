@@ -20,6 +20,7 @@ const options = {
     buildResources: './resources',
     output: process.env.Z_MUSIC_BUILD_OUTPUT || process.env.IKUN_BUILD_OUTPUT || './build',
   },
+  npmRebuild: process.env.Z_MUSIC_SKIP_NATIVE_REBUILD !== 'true',
   files: [
     '!node_modules/**/*',
     'node_modules/font-list',

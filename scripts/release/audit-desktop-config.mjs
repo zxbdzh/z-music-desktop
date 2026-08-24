@@ -19,6 +19,7 @@ assert.match(pack, new RegExp(`schemes: \\[['"]${DESKTOP_RELEASE.protocolScheme}
 assert.match(pack, /extraResources: \['\.\/licenses', '\.\/LICENSE', '\.\/NOTICE'\]/)
 assert.match(pack, /requestedExecutionLevel: 'asInvoker'/)
 assert.match(pack, /deleteAppDataOnUninstall: false/)
+assert.match(pack, /Z_MUSIC_SKIP_NATIVE_REBUILD/)
 assert.match(app, /setAsDefaultProtocolClient\('lxmusic'/)
 assert.match(app, /PORTABLE_EXECUTABLE_DIR/)
 assert.match(constants, /\^lxmusic:\\\/\\\//)

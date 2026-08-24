@@ -16,7 +16,7 @@ Set-Content -Path $canary -Value 'Desktop 1.4.5 compatibility canary' -NoNewline
 $before = (Get-FileHash $canary -Algorithm SHA256).Hash.ToLowerInvariant()
 
 try {
-  $setupProcess = Start-Process -FilePath (Resolve-Path $Setup) -ArgumentList '/S', "/D=$installDir" -Wait -PassThru
+  $setupProcess = Start-Process -FilePath (Resolve-Path $Setup) -ArgumentList '/S' -Wait -PassThru
   if ($setupProcess.ExitCode -ne 0) { throw "Setup exited with $($setupProcess.ExitCode)" }
   $installedExe = Join-Path $installDir 'z-music-desktop.exe'
   if (-not (Test-Path $installedExe)) { throw "Installed executable missing: $installedExe" }
