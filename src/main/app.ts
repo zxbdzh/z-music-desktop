@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { env } from 'node:process'
 import { existsSync, mkdirSync, renameSync } from 'fs'
 import { app, shell, screen, nativeTheme, dialog } from 'electron'
 import { URL_SCHEME_RXP } from '@common/constants'
@@ -138,7 +139,7 @@ export const setUserDataPath = () => {
   if (process.platform == 'win32') {
     const portableRoot = resolvePortableRoot({
       executablePath: app.getPath('exe'),
-      portableExecutableDir: process.env.PORTABLE_EXECUTABLE_DIR,
+      portableExecutableDir: env.PORTABLE_EXECUTABLE_DIR,
     })
     const portablePath = path.join(portableRoot, 'portable')
     if (existsSync(portablePath)) {

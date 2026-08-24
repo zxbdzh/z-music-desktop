@@ -45,6 +45,9 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm release:test && pnpm release:audit
       - run: pnpm lint && pnpm test:run && pnpm build
+      - name: Verify portable environment survives production compilation
+        run: |
+          node -e "const s=require('fs').readFileSync('dist/main.js','utf8'); if (!s.includes('PORTABLE_EXECUTABLE_DIR') || s.includes('({\"NODE_ENV\":\"production\"}).PORTABLE_EXECUTABLE_DIR')) process.exit(1)"
       - name: Ensure build did not rewrite tracked files
         run: git diff --exit-code
 
@@ -144,17 +147,17 @@ jobs:
             os: macos-15-intel
             command: pnpm build && (pnpm pack:mac:dmg || (hdiutil detach /Volumes/z-music-desktop -force || true; pnpm pack:mac:dmg))
             forceNativeRebuild: '0'
-            skipNativeRebuild: '0'
+            skipNativeRebuild: 'false'
           - name: macOS arm64
             os: macos-15
             command: pnpm build && pnpm pack:mac:dmg:arm64
             forceNativeRebuild: '0'
-            skipNativeRebuild: '0'
+            skipNativeRebuild: 'false'
           - name: Linux x64
             os: ubuntu-latest
             command: pnpm build && pnpm exec electron-rebuild -f -o better-sqlite3 && pnpm pack:linux:appImage
             forceNativeRebuild: '1'
-            skipNativeRebuild: '1'
+            skipNativeRebuild: 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
