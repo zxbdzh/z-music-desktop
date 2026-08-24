@@ -84,14 +84,22 @@ test('keeps release candidates read-only, reviewable, and non-publishing', () =>
 
   const sourceGate = release.value.jobs['source-gate']
   const candidate = release.value.jobs['windows-candidate']
-  const windows10 = release.value.jobs['windows-10-acceptance']
+  const clientAcceptance = release.value.jobs['windows-client-acceptance']
   assert.equal(candidate.needs, 'source-gate')
   assert.equal(candidate['runs-on'], 'windows-2025')
-  assert.equal(windows10.if, "github.event_name == 'workflow_dispatch'")
-  assert.deepEqual(windows10['runs-on'], ['self-hosted', 'Windows', 'X64', 'windows-10'])
-  assert.match(windows10.steps.find((step) => step.name === 'Verify Windows 10 host and artifact hashes').run, /Windows 10/)
+  assert.equal(candidate.name, 'Windows x64 candidate build')
+  assert.equal(clientAcceptance.if, "github.event_name == 'workflow_dispatch'")
+  assert.deepEqual(clientAcceptance['runs-on'], ['self-hosted', 'Windows', 'X64', '${{ matrix.runnerLabel }}'])
+  assert.deepEqual(clientAcceptance.strategy.matrix.include, [
+    { windowsMajor: '10', runnerLabel: 'windows-10', evidence: 'windows-10-acceptance.json' },
+    { windowsMajor: '11', runnerLabel: 'windows-11', evidence: 'windows-11-acceptance.json' },
+  ])
+  const acceptanceCommand = clientAcceptance.steps.find((step) => step.name === 'Run Windows client acceptance').run
+  assert.match(acceptanceCommand, /-ExpectedWindowsMajor '\$\{\{ matrix\.windowsMajor \}\}'/)
+  assert.match(acceptanceCommand, /-LegacySetup/)
+  assert.doesNotMatch(candidate.name, /Windows 1[01].*acceptance/)
 
-  for (const job of [sourceGate, candidate, windows10, release.value.jobs['best-effort-build']]) {
+  for (const job of [sourceGate, candidate, clientAcceptance, release.value.jobs['best-effort-build']]) {
     const checkout = job.steps.find((step) => step.uses === 'actions/checkout@v4')
     assert.equal(checkout.with['persist-credentials'], false)
   }
