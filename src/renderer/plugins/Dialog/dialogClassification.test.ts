@@ -1,9 +1,17 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
-import { execFileSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
 
 const root = process.cwd()
+const sourceRoot = join(root, 'src/renderer')
+const collectDialogCallSites = (directory: string): string[] => readdirSync(directory, { withFileTypes: true })
+  .flatMap((entry) => {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) return collectDialogCallSites(path)
+    if (!/\.(?:vue|ts|js)$/.test(entry.name) || /\.(?:test|spec)\./.test(entry.name)) return []
+    return /dialog\.(?:show|confirm)|dialog\(/.test(readFileSync(path, 'utf8')) ? [path] : []
+  })
+
 const documented = new Set([
   'components/common/ListAddModal.vue',
   'components/common/ListAddMultipleModal.vue',
@@ -49,12 +57,8 @@ const documented = new Set([
 
 describe('Dialog call-site governance', () => {
   it('keeps every remaining renderer Dialog call-site classified', () => {
-    const output = execFileSync('rg', [
-      '-l', 'dialog\\.(show|confirm)|dialog\\(', 'src/renderer',
-      '-g', '*.vue', '-g', '*.ts', '-g', '*.js', '-g', '!*.test.*', '-g', '!*.spec.*',
-    ], { cwd: root, encoding: 'utf8' })
-    const actual = new Set(output.trim().split(/\r?\n/).map((file) =>
-      relative(join(root, 'src/renderer'), join(root, file)).replaceAll('\\', '/')
+    const actual = new Set(collectDialogCallSites(sourceRoot).map((file) =>
+      relative(sourceRoot, file).replaceAll('\\', '/')
     ))
     expect(actual).toEqual(documented)
   })
