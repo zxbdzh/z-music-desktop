@@ -45,10 +45,14 @@ try {
 
   New-Item -ItemType Directory -Force $portableRoot | Out-Null
   $portableProcess = Start-Process -FilePath (Resolve-Path $Portable) -ArgumentList '--hidden' -PassThru
-  Start-Sleep -Seconds 8
+  $portableData = Join-Path $portableRoot 'userData\LxDatas'
+  $deadline = (Get-Date).AddSeconds(30)
+  while (-not (Test-Path $portableData) -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Seconds 1
+  }
   if ($portableProcess.HasExited -and $portableProcess.ExitCode -ne 0) { throw "Portable app exited with $($portableProcess.ExitCode)" }
   Get-Process -Name 'z-music-desktop' -ErrorAction SilentlyContinue | Stop-Process -Force
-  if (-not (Test-Path (Join-Path $portableRoot 'userData\LxDatas'))) { throw 'Portable user data directory was not created' }
+  if (-not (Test-Path $portableData)) { throw 'Portable user data directory was not created' }
   if ((Get-FileHash $canary -Algorithm SHA256).Hash.ToLowerInvariant() -ne $before) { throw 'Portable launch changed legacy data' }
   $results.portableIsolation = 'PASS'
 } finally {

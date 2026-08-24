@@ -152,7 +152,7 @@ jobs:
             skipNativeRebuild: '0'
           - name: Linux x64
             os: ubuntu-latest
-            command: pnpm build && pnpm exec electron-rebuild -f -w better-sqlite3 && pnpm pack:linux:appImage
+            command: pnpm build && pnpm exec electron-rebuild -f -o better-sqlite3 && pnpm pack:linux:appImage
             forceNativeRebuild: '1'
             skipNativeRebuild: '1'
     runs-on: ${{ matrix.os }}
