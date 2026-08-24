@@ -52,7 +52,7 @@ jobs:
         run: git diff --exit-code
 
   windows-candidate:
-    name: Windows 11 x64 candidate and acceptance
+    name: Windows x64 candidate build
     needs: source-gate
     runs-on: windows-2025
     timeout-minutes: 70
@@ -90,9 +90,6 @@ jobs:
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/release/write-manifest.mjs $env:CANDIDATE_SHA .artifacts/release/release-manifest.json .artifacts/release/z-music-desktop-v1.5.0-x64-Setup.exe .artifacts/release/z-music-desktop-v1.5.0-x64-portable.exe
-      - name: Run Windows install and compatibility acceptance
-        shell: pwsh
-        run: ./scripts/release/windows-acceptance.ps1 -Setup .artifacts/release/z-music-desktop-v1.5.0-x64-Setup.exe -Portable .artifacts/release/z-music-desktop-v1.5.0-x64-portable.exe -Commit '${{ github.event.pull_request.head.sha || github.sha }}' -Output .artifacts/release/windows-acceptance.json
       - uses: actions/upload-artifact@v4
         with:
           name: z-music-desktop-v1.5.0-windows-x64
@@ -100,12 +97,22 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  windows-10-acceptance:
-    name: Windows 10 x64 acceptance
+  windows-client-acceptance:
+    name: Windows ${{ matrix.windowsMajor }} x64 acceptance
     needs: windows-candidate
     if: github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, Windows, X64, windows-10]
-    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - windowsMajor: '10'
+            runnerLabel: windows-10
+            evidence: windows-10-acceptance.json
+          - windowsMajor: '11'
+            runnerLabel: windows-11
+            evidence: windows-11-acceptance.json
+    runs-on: [self-hosted, Windows, X64, '${{ matrix.runnerLabel }}']
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
         with:
@@ -115,23 +122,27 @@ jobs:
         with:
           name: z-music-desktop-v1.5.0-windows-x64
           path: build
-      - name: Verify Windows 10 host and artifact hashes
+      - name: Download historical 1.4.5 x64 Setup
         shell: pwsh
         run: |
-          $os = Get-CimInstance Win32_OperatingSystem
-          if ($os.Caption -notmatch 'Windows 10') { throw "Expected Windows 10, got $($os.Caption)" }
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/zxbdzh/z-music-desktop-legacy-fork/releases/download/v1.4.5/ikun-music-desktop-v1.4.5-x64-Setup.exe' -OutFile build/ikun-music-desktop-v1.4.5-x64-Setup.exe
+          $actual = (Get-FileHash build/ikun-music-desktop-v1.4.5-x64-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne 'e66008435cadb42b5a98b41f76a340dd955d08f696bbf1e47226a797a41fcc0e') { throw 'Historical Setup SHA-256 mismatch' }
+      - name: Verify candidate artifact hashes
+        shell: pwsh
+        run: |
           Get-Content build/SHA256SUMS.txt | ForEach-Object {
             $parts = $_ -split '\s+', 2
             $actual = (Get-FileHash (Join-Path build $parts[1]) -Algorithm SHA256).Hash.ToLowerInvariant()
             if ($actual -ne $parts[0]) { throw "SHA-256 mismatch for $($parts[1])" }
           }
-      - name: Run Windows 10 install and compatibility acceptance
+      - name: Run Windows client acceptance
         shell: pwsh
-        run: ./scripts/release/windows-acceptance.ps1 -Setup build/z-music-desktop-v1.5.0-x64-Setup.exe -Portable build/z-music-desktop-v1.5.0-x64-portable.exe -Commit '${{ github.sha }}' -Output build/windows-10-acceptance.json
+        run: ./scripts/release/windows-acceptance.ps1 -LegacySetup build/ikun-music-desktop-v1.4.5-x64-Setup.exe -Setup build/z-music-desktop-v1.5.0-x64-Setup.exe -Portable build/z-music-desktop-v1.5.0-x64-portable.exe -Commit '${{ github.sha }}' -ExpectedWindowsMajor '${{ matrix.windowsMajor }}' -RcManifest docs/qa/evidence/desktop-rc.manifest.json -Output 'build/${{ matrix.evidence }}'
       - uses: actions/upload-artifact@v4
         with:
-          name: z-music-desktop-v1.5.0-windows-10-evidence
-          path: build/windows-10-acceptance.json
+          name: z-music-desktop-v1.5.0-windows-${{ matrix.windowsMajor }}-evidence
+          path: build/${{ matrix.evidence }}
           if-no-files-found: error
           retention-days: 14
 

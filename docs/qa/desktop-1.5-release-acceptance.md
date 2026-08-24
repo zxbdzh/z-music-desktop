@@ -7,18 +7,23 @@ installation evidence, hashes, release notes, and the draft release.
 
 | Path | Windows 10 x64 | Windows 11 x64 |
 | --- | --- | --- |
-| Setup current-user install | `windows-10-acceptance.json` | `windows-acceptance.json` |
+| Setup current-user install | `windows-10-acceptance.json` | `windows-11-acceptance.json` |
 | First launch | same evidence | same evidence |
-| 1.4.5 historical data remains readable | same evidence | same evidence |
+| Historical 1.4.5 install and in-place 1.5.0 upgrade | same evidence | same evidence |
+| Historical data remains readable | same evidence | same evidence |
 | `lxmusic://` and OAuth callback | same evidence | same evidence |
+| Updater repository, declared associations, tray/close behavior | same evidence | same evidence |
 | Uninstall preserves user data | same evidence | same evidence |
 | Portable data isolation | same evidence | same evidence |
 | Artifact SHA-256 | `SHA256SUMS.txt` | `SHA256SUMS.txt` |
 
-The Windows 11 job uses GitHub's `windows-2025` hosted image. Windows 10 must
-run on a repository self-hosted x64 runner carrying the exact `windows-10`
-label; the workflow checks the OS caption before accepting evidence. A Server
-image or compatibility mode does not count as Windows 10 evidence.
+The Windows artifact is built on GitHub's `windows-2025` hosted image, which is
+a Windows Server build host and does not count as client acceptance. Windows 10
+and Windows 11 must each run on repository self-hosted x64 runners carrying the
+exact `windows-10` or `windows-11` label. The acceptance script checks the
+client OS caption, architecture, and build range before accepting evidence. A
+Server image, renamed job, or compatibility mode does not count as client OS
+evidence.
 
 ## Candidate commands
 
