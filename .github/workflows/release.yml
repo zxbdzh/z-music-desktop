@@ -1,104 +1,176 @@
-name: Build Candidate
+name: Desktop 1.5 Candidate
 
 on:
   workflow_dispatch:
-    inputs:
-      configuration_only:
-        description: Validate optional notification configuration without building
-        required: true
-        default: true
-        type: boolean
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'build-config/**'
+      - 'scripts/release/**'
+      - 'src/main/**'
+      - 'src/common/constants.ts'
+      - 'src/common/cerumusic.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'LICENSE'
+      - 'NOTICE'
 
 permissions:
   contents: read
+
+concurrency:
+  group: desktop-1-5-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   IS_CI: 'true'
 
 jobs:
-  notification-configuration:
-    name: Optional notification configuration
+  source-gate:
+    name: Shared source gate
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      configured: ${{ steps.notification.outputs.configured }}
+    timeout-minutes: 35
     steps:
-      - name: Check PushPlus configuration
-        id: notification
-        shell: bash
-        env:
-          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-        run: |
-          if [[ -z "$PUSHPLUS_TOKEN" ]]; then
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::PushPlus notification skipped because PUSHPLUS_TOKEN is not configured."
-          else
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          fi
-
-  windows-candidate:
-    name: Windows unsigned candidate
-    needs: notification-configuration
-    if: github.ref == 'refs/heads/main' && inputs.configuration_only == false
-    runs-on: windows-latest
-    timeout-minutes: 60
-    steps:
-      - name: Check out main candidate
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 10.34.5
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22.22.0
           cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm release:test && pnpm release:audit
+      - run: pnpm lint && pnpm test:run && pnpm build
+      - name: Ensure build did not rewrite tracked files
+        run: git diff --exit-code
 
-      - name: Install dependencies without lifecycle scripts
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Verify lockfile is unchanged
-        run: git diff --exit-code -- pnpm-lock.yaml
-
-      - name: Build desktop source
-        run: pnpm build
-
-      - name: Package unsigned Windows x64 candidate
+  windows-candidate:
+    name: Windows 11 x64 candidate and acceptance
+    needs: source-gate
+    runs-on: windows-2025
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm release:audit
+      - name: Build Setup and portable packages
         run: |
           pnpm pack:win:setup:x64
-          pnpm pack:win:7z:x64
-
-      - name: Write SHA-256
+          pnpm pack:win:portable:x64
+      - name: Verify package contents and tracked files
         shell: pwsh
-        run: Get-FileHash build/*.exe,build/*.7z -Algorithm SHA256 | Format-List | Out-File build/SHA256SUMS.txt
-
-      - name: Upload unsigned candidate
-        uses: actions/upload-artifact@v4
+        run: |
+          $unpacked = 'build/win-unpacked/resources'
+          if (-not (Test-Path "$unpacked/LICENSE")) { throw 'LICENSE missing from package' }
+          if (-not (Test-Path "$unpacked/NOTICE")) { throw 'NOTICE missing from package' }
+          git diff --exit-code
+      - name: Write candidate manifest and SHA-256
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/release/write-manifest.mjs "$CANDIDATE_SHA" build/release-manifest.json build/*-x64-Setup.exe build/*-x64-portable.exe
+      - name: Run Windows install and compatibility acceptance
+        shell: pwsh
+        run: ./scripts/release/windows-acceptance.ps1 -Setup build/z-music-desktop-v1.5.0-x64-Setup.exe -Portable build/z-music-desktop-v1.5.0-x64-portable.exe -Commit '${{ github.event.pull_request.head.sha || github.sha }}'
+      - uses: actions/upload-artifact@v4
         with:
-          name: z-music-desktop-windows-unsigned-candidate
+          name: z-music-desktop-v1.5.0-windows-x64
           path: |
-            build/*-x64-Setup.exe
-            build/*win_x64-green.7z
+            build/z-music-desktop-v1.5.0-x64-Setup.exe
+            build/z-music-desktop-v1.5.0-x64-portable.exe
             build/SHA256SUMS.txt
+            build/release-manifest.json
+            build/windows-acceptance.json
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-10-acceptance:
+    name: Windows 10 x64 acceptance
+    needs: windows-candidate
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, Windows, X64, windows-10]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: z-music-desktop-v1.5.0-windows-x64
+          path: build
+      - name: Verify Windows 10 host and artifact hashes
+        shell: pwsh
+        run: |
+          $os = Get-CimInstance Win32_OperatingSystem
+          if ($os.Caption -notmatch 'Windows 10') { throw "Expected Windows 10, got $($os.Caption)" }
+          Get-Content build/SHA256SUMS.txt | ForEach-Object {
+            $parts = $_ -split '\s+', 2
+            $actual = (Get-FileHash (Join-Path build $parts[1]) -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $parts[0]) { throw "SHA-256 mismatch for $($parts[1])" }
+          }
+      - name: Run Windows 10 install and compatibility acceptance
+        shell: pwsh
+        run: ./scripts/release/windows-acceptance.ps1 -Setup build/z-music-desktop-v1.5.0-x64-Setup.exe -Portable build/z-music-desktop-v1.5.0-x64-portable.exe -Commit '${{ github.sha }}' -Output build/windows-10-acceptance.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: z-music-desktop-v1.5.0-windows-10-evidence
+          path: build/windows-10-acceptance.json
+          if-no-files-found: error
+          retention-days: 14
+
+  best-effort-build:
+    name: Best effort ${{ matrix.name }}
+    needs: source-gate
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS x64
+            os: macos-15-intel
+            command: pnpm pack:mac:dmg
+          - name: macOS arm64
+            os: macos-15
+            command: pnpm pack:mac:dmg:arm64
+          - name: Linux x64
+            os: ubuntu-latest
+            command: pnpm build && pnpm pack:linux:appImage
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm release:audit
+      - run: ${{ matrix.command }}
+      - run: git diff --exit-code
+      - uses: actions/upload-artifact@v4
+        with:
+          name: z-music-desktop-v1.5.0-${{ matrix.name }}
+          path: build/*
           if-no-files-found: error
           retention-days: 7
-
-      - name: Send optional PushPlus notification
-        if: always() && needs.notification-configuration.outputs.configured == 'true'
-        shell: pwsh
-        env:
-          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-        run: |
-          $body = @{
-            token = $env:PUSHPLUS_TOKEN
-            title = "z-music-desktop candidate build"
-            content = "Candidate build status: ${{ job.status }}"
-            template = "markdown"
-          } | ConvertTo-Json -Compress
-          Invoke-RestMethod -Uri "https://www.pushplus.plus/send" -Method Post -ContentType "application/json" -Body $body

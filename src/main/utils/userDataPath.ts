@@ -10,6 +10,14 @@ export interface UserDataPathOptions {
   pathExists?: (targetPath: string) => boolean
 }
 
+export const resolvePortableRoot = ({
+  executablePath,
+  portableExecutableDir,
+}: {
+  executablePath: string
+  portableExecutableDir?: string
+}): string => portableExecutableDir || path.dirname(executablePath)
+
 /** Keep existing installations on their legacy directory until a new one has data. */
 export const resolveCompatibleUserDataPath = ({
   appDataPath,
