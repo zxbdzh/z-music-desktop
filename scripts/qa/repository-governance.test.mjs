@@ -76,24 +76,26 @@ test('keeps the Repository Ready acceptance matrix aligned with workflows', () =
   ]) assert.ok(acceptance.includes(invariant))
 })
 
-test('keeps release candidates read-only, main-only, and non-publishing', () => {
+test('keeps release candidates read-only, reviewable, and non-publishing', () => {
   assert.deepEqual(release.value.permissions, { contents: 'read' })
-  const input = release.value.on.workflow_dispatch.inputs.configuration_only
-  assert.equal(input.default, true)
-  assert.equal(input.type, 'boolean')
+  assert.ok('workflow_dispatch' in release.value.on)
+  assert.ok(release.value.on.pull_request !== undefined)
+  assert.doesNotMatch(release.source, /pull_request_target/)
 
-  const configuration = release.value.jobs['notification-configuration']
+  const sourceGate = release.value.jobs['source-gate']
   const candidate = release.value.jobs['windows-candidate']
-  assert.equal(candidate.needs, 'notification-configuration')
-  assert.equal(candidate.if, "github.ref == 'refs/heads/main' && inputs.configuration_only == false")
-  const checkout = candidate.steps.find((step) => step.uses === 'actions/checkout@v4')
-  assert.equal(checkout.with['persist-credentials'], false)
-  assert.match(release.source, /pnpm install --frozen-lockfile --ignore-scripts/)
-  assert.doesNotMatch(release.source, /pnpm publish:|GITHUB_TOKEN|contents: write/)
+  const windows10 = release.value.jobs['windows-10-acceptance']
+  assert.equal(candidate.needs, 'source-gate')
+  assert.equal(candidate['runs-on'], 'windows-2025')
+  assert.equal(windows10.if, "github.event_name == 'workflow_dispatch'")
+  assert.deepEqual(windows10['runs-on'], ['self-hosted', 'Windows', 'X64', 'windows-10'])
+  assert.match(windows10.steps.find((step) => step.name === 'Verify Windows 10 host and artifact hashes').run, /Windows 10/)
 
-  const notificationCheck = configuration.steps.find((step) => step.id === 'notification')
-  const notification = candidate.steps.find((step) => step.name === 'Send optional PushPlus notification')
-  assert.match(notificationCheck.run, /configured=false/)
-  assert.match(notificationCheck.run, /notification skipped/)
-  assert.equal(notification.if, "always() && needs.notification-configuration.outputs.configured == 'true'")
+  for (const job of [sourceGate, candidate, windows10, release.value.jobs['best-effort-build']]) {
+    const checkout = job.steps.find((step) => step.uses === 'actions/checkout@v4')
+    assert.equal(checkout.with['persist-credentials'], false)
+  }
+  assert.match(release.source, /pnpm install --frozen-lockfile --ignore-scripts/)
+  assert.match(release.source, /git diff --exit-code/)
+  assert.doesNotMatch(release.source, /pnpm publish:|GITHUB_TOKEN|contents: write|secrets\./)
 })
