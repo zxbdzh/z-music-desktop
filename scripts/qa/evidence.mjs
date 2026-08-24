@@ -232,7 +232,9 @@ function validateDisplay (display, location, errors) {
     errors.push(`${location}.viewport must contain positive integer width and height`)
   }
   if (!['portrait', 'landscape'].includes(display.orientation)) errors.push(`${location}.orientation is unknown`)
-  if (!['light', 'dark', 'system'].includes(display.theme)) errors.push(`${location}.theme is unknown`)
+  if (!['light', 'dark', 'system'].includes(display.theme) && !/^custom:[a-z0-9][a-z0-9_-]*$/.test(display.theme)) {
+    errors.push(`${location}.theme is unknown`)
+  }
   if (typeof display.fontScale !== 'number' || display.fontScale <= 0) errors.push(`${location}.fontScale must be positive`)
   if (typeof display.reducedMotion !== 'boolean') errors.push(`${location}.reducedMotion must be boolean`)
 }

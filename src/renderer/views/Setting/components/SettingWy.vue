@@ -7,6 +7,7 @@ dd
       span(:class="$style.tip") {{ $t('setting__wy_service_desc') }}
     .p(:class="$style.serviceRow")
       base-input(
+        id="setting_wy_api_base"
         v-model="apiBaseUrl"
         :placeholder="$t('setting__wy_service_placeholder')"
         :disabled="isTestingApi"
@@ -108,7 +109,7 @@ dd
 <script>
 import { ref, computed } from '@common/utils/vueTools'
 import { appSetting, updateSetting } from '@renderer/store/setting'
-import { dialog } from '@renderer/plugins/Dialog'
+import { notice } from '@renderer/plugins/Notice'
 import { useI18n } from '@root/lang'
 import { normalizeWyApiBaseUrl, validateWyApiBaseUrl } from '@renderer/utils/musicSdk/wy/wyApiBase'
 
@@ -176,10 +177,7 @@ export default {
       apiValidationError.value = false
       apiStatus.value = ''
       updateSetting({ 'wy.apiBaseUrl': result.value })
-      void dialog({
-        message: t('setting__wy_service_saved'),
-        confirmButtonText: t('ok'),
-      })
+      notice.success(t('setting__wy_service_saved'), { id: 'setting-wy-service' })
     }
 
     const handleClearApiBaseUrl = () => {
@@ -187,10 +185,7 @@ export default {
       apiValidationError.value = false
       apiStatus.value = ''
       updateSetting({ 'wy.apiBaseUrl': '' })
-      void dialog({
-        message: t('setting__wy_service_cleared'),
-        confirmButtonText: t('ok'),
-      })
+      notice.success(t('setting__wy_service_cleared'), { id: 'setting-wy-service' })
     }
 
     const handleTestApiConnection = async () => {
@@ -204,13 +199,27 @@ export default {
       isTestingApi.value = true
       apiValidationError.value = false
       apiStatus.value = ''
+      notice.loading(t('setting__wy_service_testing'), { id: 'setting-wy-connection' })
       try {
         const wyUtilImport = await import('@renderer/utils/musicSdk/wy/wyUtil')
         const connection = await wyUtilImport.default.testApiConnection(result.value)
         apiStatus.value = connection.status
+        const message = connection.status === 'reachable'
+          ? t('setting__wy_service_reachable')
+          : connection.status === 'not_logged_in'
+            ? t('setting__wy_service_not_logged_in')
+            : t('setting__wy_service_failed')
+        notice.update('setting-wy-connection', {
+          type: connection.status === 'failed' ? 'error' : 'success',
+          message,
+        })
       } catch {
         // The utility already redacts transport errors; the UI only exposes a safe state.
         apiStatus.value = 'failed'
+        notice.update('setting-wy-connection', {
+          type: 'error',
+          message: t('setting__wy_service_failed'),
+        })
       } finally {
         isTestingApi.value = false
       }
@@ -233,10 +242,7 @@ export default {
       const result = await wyUtilImport.default.sendCaptcha(phone)
 
       if (result.success) {
-        void dialog({
-          message: '验证码已发送',
-          confirmButtonText: t('ok'),
-        })
+        notice.success(t('setting__wy_captcha_sent'), { id: 'setting-wy-auth' })
         // 开始倒计时
         captchaCooldown.value = 60
         if (captchaTimer) clearInterval(captchaTimer)
@@ -248,10 +254,7 @@ export default {
           }
         }, 1000)
       } else {
-        void dialog({
-          message: result.message || t('setting__wy_login_failed'),
-          confirmButtonText: t('ok'),
-        })
+        notice.error(result.message || t('setting__wy_login_failed'), { id: 'setting-wy-auth' })
       }
     }
 
@@ -267,10 +270,7 @@ export default {
 
         if (result.success) {
           updateSetting({ 'common.wy_cookie': result.cookie })
-          void dialog({
-            message: t('setting__wy_login_success'),
-            confirmButtonText: t('ok'),
-          })
+          notice.success(t('setting__wy_login_success'), { id: 'setting-wy-auth' })
           // 清空表单
           phoneNumber.value = ''
           captchaCode.value = ''
@@ -280,16 +280,10 @@ export default {
           }
           captchaCooldown.value = 0
         } else {
-          void dialog({
-            message: result.message || t('setting__wy_login_failed'),
-            confirmButtonText: t('ok'),
-          })
+          notice.error(result.message || t('setting__wy_login_failed'), { id: 'setting-wy-auth' })
         }
       } catch {
-        void dialog({
-          message: t('setting__wy_login_failed'),
-          confirmButtonText: t('ok'),
-        })
+        notice.error(t('setting__wy_login_failed'), { id: 'setting-wy-auth' })
       } finally {
         isLoading.value = false
       }
@@ -303,16 +297,10 @@ export default {
       try {
         // 直接保存 Cookie，不在校验，真实请求时会自动校验
         updateSetting({ 'common.wy_cookie': cookie })
-        void dialog({
-          message: t('setting__wy_login_success'),
-          confirmButtonText: t('ok'),
-        })
+        notice.success(t('setting__wy_login_success'), { id: 'setting-wy-auth' })
         closeModal()
       } catch {
-        void dialog({
-          message: t('setting__wy_login_failed'),
-          confirmButtonText: t('ok'),
-        })
+        notice.error(t('setting__wy_login_failed'), { id: 'setting-wy-auth' })
       } finally {
         isLoading.value = false
       }
@@ -320,10 +308,7 @@ export default {
 
     const handleLogout = () => {
       updateSetting({ 'common.wy_cookie': '' })
-      void dialog({
-        message: t('setting__wy_login_logout_success'),
-        confirmButtonText: t('ok'),
-      })
+      notice.success(t('setting__wy_login_logout_success'), { id: 'setting-wy-auth' })
     }
 
     const handleToggleScrobble = (checked) => {

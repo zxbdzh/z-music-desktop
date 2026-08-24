@@ -1,18 +1,30 @@
 <template>
   <div :class="$style.main">
     <div class="scroll" :class="$style.toc">
-      <ul :class="$style.tocList" role="tablist" aria-label="设置分组">
+      <SettingsSearch
+        :items="searchItems"
+        :label="t('setting_search_label')"
+        :placeholder="t('setting_search_placeholder')"
+        :clear-label="t('setting_search_clear')"
+        :empty-label="t('setting_search_empty')"
+        @select="handleSearchSelect"
+      />
+      <ul :class="$style.tocList" role="tablist" aria-label="设置分组" aria-orientation="vertical">
         <li v-for="group in tocGroups" :key="group.id" :class="$style.tocGroup" role="presentation">
           <span :class="$style.groupLabel">{{ group.title }}</span>
           <ul :class="$style.groupItems">
             <li v-for="item in group.items" :key="item.id" :class="$style.tocListItem" role="presentation">
               <button
+                :id="`setting-tab-${item.id}`"
                 type="button"
                 :class="[$style.tocH2, { [$style.active]: avtiveComponentName == item.id }]"
                 role="tab"
                 :aria-selected="avtiveComponentName == item.id"
+                :aria-controls="`setting-panel-${item.id}`"
+                :tabindex="avtiveComponentName == item.id ? 0 : -1"
                 :aria-label="item.title"
                 @click="toggleTab(item.id)"
+                @keydown="handleTabKeydown($event, item.id)"
               >
                 <transition name="list-active">
                   <svg-icon
@@ -28,7 +40,15 @@
         </li>
       </ul>
     </div>
-    <div ref="dom_content_ref" class="scroll" :class="$style.setting">
+    <div
+      :id="`setting-panel-${avtiveComponentName}`"
+      ref="dom_content_ref"
+      class="scroll"
+      :class="$style.setting"
+      role="tabpanel"
+      :aria-labelledby="`setting-tab-${avtiveComponentName}`"
+      tabindex="-1"
+    >
       <dl>
         <component :is="avtiveComponentName" />
         <!-- <SettingBasic />
@@ -52,7 +72,7 @@
 </template>
 
 <script>
-import { ref, computed, nextTick } from '@common/utils/vueTools'
+import { ref, computed, nextTick, watch } from '@common/utils/vueTools'
 // import { currentStting } from './setting'
 import { useI18n } from '@renderer/plugins/i18n'
 import { useRoute } from '@common/utils/vueRouter'
@@ -77,6 +97,30 @@ import SettingBackup from './components/SettingBackup.vue'
 import SettingOther from './components/SettingOther.vue'
 import SettingUpdate from './components/SettingUpdate.vue'
 import SettingAbout from './components/SettingAbout.vue'
+import SettingsSearch from './SettingsSearch.vue'
+
+const SEARCH_META = {
+  SettingWy: { targetId: 'setting_wy_api_base', keywords: ['netease', 'cloud', '网易云', '账号', 'account', 'cookie'] },
+  SettingLastfm: { targetId: 'setting_lastfm_enable_scrobble', keywords: ['lastfm', 'scrobble', '听歌记录', '报告'] },
+  SettingPlay: { targetId: 'setting_player_startup_auto_play', keywords: ['playback', 'player', '播放', '自动播放', 'audio'] },
+  SettingPlayDetail: { targetId: 'setting_play_detail_font_zoom_enable', keywords: ['now playing', 'lyrics', '播放详情', '歌词'] },
+  SettingDesktopLyric: { targetId: 'setting_desktop_lyric_enable', keywords: ['desktop lyrics', '桌面歌词', 'font'] },
+  SettingHaloPixel: { targetId: 'setting_halo_pixel_enable', keywords: ['halopixel', '花再', '音响', '歌词'] },
+  SettingSearch: { targetId: 'setting_search_showHot_enable', keywords: ['search', 'history', '搜索', '历史', '热门'] },
+  SettingList: { targetId: 'setting_list_actionButtonsVisible_enable', keywords: ['library', 'playlist', '音乐库', '歌单', '列表'] },
+  SettingDownload: { targetId: 'setting_download_enable', keywords: ['download', '下载', 'folder', '目录'] },
+  SettingBasic: { targetId: 'setting_show_animate', keywords: ['general', 'theme', 'language', '基础', '主题', '语言', 'animation', '动效'] },
+  SettingHotKey: { targetId: 'setting_download_hotKeyLocal', keywords: ['keyboard', 'shortcut', 'hotkey', '快捷键', '键盘'] },
+  SettingSync: { targetId: 'setting_sync_enable', keywords: ['sync', '同步', 'server', 'client'] },
+  SettingOpenAPI: { targetId: 'setting_open_api_enable', keywords: ['open api', 'server', '开放接口'] },
+  SettingNetwork: { targetId: 'setting_network_proxy_enable', keywords: ['network', 'proxy', '网络', '代理'] },
+  SettingWebdav: { keywords: ['webdav', 'cloud', '云盘', '远程'] },
+  SettingOdc: { targetId: 'setting_odc_isAutoClearSearchInput', keywords: ['other devices', 'odc', '其他设备', '搜索清理'] },
+  SettingBackup: { keywords: ['backup', 'restore', 'import', 'export', '备份', '恢复', '导入', '导出'] },
+  SettingOther: { targetId: 'setting_transparent_window', keywords: ['other', 'window', 'transparent', '其他', '窗口', '透明'] },
+  SettingUpdate: { targetId: 'setting__update_tryAutoUpdate', keywords: ['update', 'version', '更新', '版本'] },
+  SettingAbout: { keywords: ['about', 'license', 'version', '关于', '许可', '版本'] },
+}
 
 export default {
   name: 'Setting',
@@ -101,6 +145,7 @@ export default {
     SettingOther,
     SettingUpdate,
     SettingAbout,
+    SettingsSearch,
   },
   setup() {
     const t = useI18n()
@@ -161,6 +206,15 @@ export default {
       },
     ])
     const tocList = computed(() => tocGroups.value.flatMap((group) => group.items))
+    const searchItems = computed(() => tocGroups.value.flatMap((group) =>
+      group.items.map((item) => ({
+        ...item,
+        groupId: group.id,
+        groupTitle: group.title,
+        description: `${group.title} / ${item.title}`,
+        ...SEARCH_META[item.id],
+      }))
+    ))
 
     const avtiveComponentName = ref(
       route.query.name && tocList.value.some((t) => t.id == route.query.name)
@@ -168,22 +222,60 @@ export default {
         : tocList.value[0].id
     )
 
-    const toggleTab = (id) => {
+    const toggleTab = (id, focusPanel = false) => {
       avtiveComponentName.value = id
       void nextTick(() => {
         dom_content_ref.value?.scrollTo({
           top: 0,
           behavior: 'smooth',
         })
+        if (focusPanel) dom_content_ref.value?.focus()
       })
     }
+
+    const handleTabKeydown = (event, id) => {
+      const index = tocList.value.findIndex((item) => item.id == id)
+      let nextIndex = index
+      if (event.key == 'ArrowDown') nextIndex = (index + 1) % tocList.value.length
+      else if (event.key == 'ArrowUp') nextIndex = (index - 1 + tocList.value.length) % tocList.value.length
+      else if (event.key == 'Home') nextIndex = 0
+      else if (event.key == 'End') nextIndex = tocList.value.length - 1
+      else return
+      event.preventDefault()
+      const nextId = tocList.value[nextIndex].id
+      toggleTab(nextId)
+      void nextTick(() => document.getElementById(`setting-tab-${nextId}`)?.focus())
+    }
+
+    const handleSearchSelect = (item) => {
+      avtiveComponentName.value = item.id
+      void nextTick(() => {
+        dom_content_ref.value?.scrollTo({ top: 0 })
+        const target = item.targetId ? document.getElementById(item.targetId) : null
+        const focusTarget = target?.matches('button, input, select, textarea, [tabindex]')
+          ? target
+          : target?.querySelector('button, input, select, textarea, [tabindex]')
+        ;(focusTarget || dom_content_ref.value)?.focus()
+      })
+    }
+
+    watch(
+      () => route.query.name,
+      (name) => {
+        if (name && tocList.value.some((item) => item.id == name)) toggleTab(name, true)
+      }
+    )
 
     return {
       tocList,
       tocGroups,
+      searchItems,
+      t,
       avtiveComponentName,
       dom_content_ref,
       toggleTab,
+      handleTabKeydown,
+      handleSearchSelect,
     }
   },
   // mounted() {
