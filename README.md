@@ -3,6 +3,10 @@
 <h1 align="center">z-music-desktop</h1>
 
 <p align="center">
+  <a href="README_zh_CN.md">中文</a> · English
+</p>
+
+<p align="center">
   <a href="https://github.com/zxbdzh/z-music-desktop/releases"><img src="https://img.shields.io/github/release/zxbdzh/z-music-desktop" alt="Release version"></a>
   <a href="https://github.com/zxbdzh/z-music-desktop/actions/workflows/release.yml"><img src="https://github.com/zxbdzh/z-music-desktop/actions/workflows/release.yml/badge.svg" alt="Build status"></a>
   <a href="https://electronjs.org/releases/stable"><img src="https://img.shields.io/github/package-json/dependency-version/zxbdzh/z-music-desktop/dev/electron/main" alt="Electron version"></a>
